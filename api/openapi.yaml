@@ -1,0 +1,5117 @@
+openapi: 3.0.1
+info:
+  contact:
+    email: support@rstudio.com
+    name: RStudio Connect Support
+    url: https://support.rstudio.com/hc/en-us
+  description: |
+    The RStudio Connect API can be used to perform certain
+    user actions remotely. You will need to install a tool or library
+    that can make HTTP requests, such as:
+
+    - [httr](http://httr.r-lib.org/) (R HTTP library)
+    - [cURL](https://curl.haxx.se/) (Linux tool for making HTTP calls)
+    - [requests](https://requests.readthedocs.io/en/master/) (Python HTTP library)
+
+    ## <a name="versioning-policy">Versioning of the API</a>
+
+    The RStudio Connect Server API uses a simple, single number versioning scheme as noted
+    as the first part of each endpoint path.  This version number will only be incremented
+    in the event that non-backward compatible changes are made to an existing endpoint.
+    Note that this occurs on a per-endpoint basis; see the section on
+    [deprecation](#deprecation) below for more information.
+
+    Changes that are considered backward compatible are:
+
+    * New fields in responses.
+    * New non-required fields in requests.
+    * New endpoint behavior which does not violate the current functional intent of the
+      endpoint.
+
+    Changes that are considered non-backward compatible are:
+
+    * Removal or rename of request or response fields.
+    * A change of the type or format of one or more request or response fields.
+    * Addition of new required request fields.
+    * A substantial deviation from the current functional intent of the endpoint.
+
+    The points relating to functional intent are assumed to be extremely rare as more
+    often such situations will result in a completely new endpoint, which makes the
+    change a backward compatible addition.
+
+    ### Experimentation
+
+    RStudio Connect labels experimental endpoints in the API by including `/experimental`
+    in the endpoint path immediately after the version indicator.  If an endpoint is noted
+    as experimental, it should not be relied upon for any production work.  These are
+    endpoints that RStudio Connect is making available to our customers to solicit
+    feedback; they are subject to change without notice.  Such changes include anything
+    from altered request/response shapes, to complete abandonment of the endpoint.
+
+    This public review of an experimental endpoint will last as long as necessary to either
+    prove its viability or to determine that it’s not really needed.  The time for this
+    will vary based on the intricacies of each endpoint.  When the endpoint is finalized,
+    the next release of RStudio Connect will mark the experimental path as deprecated while
+    adding the endpoint without the `/experimental` prefix. The path with the experimental
+    prefix will be removed six months later.  The documentation for the endpoint will also
+    note, during that time, the original, experimental, path.
+
+    All experimental endpoints are clearly marked as such in this documentation.
+
+    ### <a name="deprecation">Deprecation and Removal of Old Versions</a>
+
+    It is possible that RStudio Connect may decide to deprecate an endpoint.  This will
+    happen if either the endpoint serves no useful purpose because it’s functionality is
+    now handled by a different endpoint or because there is a newer version of the endpoint
+    that should be used.
+
+    If a deprecated endpoint is called, the response to it will include an extra HTTP
+    header called, `X-Deprecated-Endpoint` and will have as a value the path of the
+    endpoint that should be used instead.  If the functionality has no direct replacement,
+    the value will be set to `n/a`.
+
+    Deprecated versions of an endpoint will be supported for 1 year from the release date
+    of RStudio Connect in which the endpoint was marked as deprecated.  At that time, the
+    endpoint is subject to removal at the discretion of RStudio Connect.  The life cycle
+    of an endpoint will follow these steps.
+
+    1. The `/v1/endpoint` is public and in use by RStudio Connect customers.
+    1. RStudio Connect makes `/v2/experimental/endpoint` available for testing and feedback.
+       Customers should still use `/v1/endpoint` for production work.
+    1. RStudio Connect moves version 2 of the endpoint out of experimentation so, all within
+       the same release:
+        1. `/v1/endpoint` is marked as deprecated.
+        1. `/v2/experimental/endpoint` is marked as deprecated.
+        1. `/v2/endpoint` is made public.
+    1. Six months later, `/v2/experimental/endpoint` is removed from the product.
+    1. Twelve months later, `/v1/endpoint` is removed from the product.
+
+    Note that it is possible that RStudio Connect may produce a new version of an existing
+    endpoint without making an experimental version of it first.  The same life cycle,
+    without those parts, will still be followed.
+
+    ## <a name="authentication">Authentication</a>
+
+    Most endpoints require you to identify yourself as a valid RStudio Connect
+    user. You do this by specifying an API Key when you make a call to the
+    server. The [API Keys](../user/api-keys/) chapter of the RStudio Connect
+    User Guide explains how to create an API Key.
+
+    ### <a name="api-keys">API Keys</a>
+
+    API Keys are managed by each user in the RStudio Connect
+    dashboard. If you ever lose an API Key or otherwise feel it has
+    been compromised, use the dashboard to revoke the key and create
+    another one.
+
+    ::alert danger
+    Keep your API Key safe.  If your RStudio Connect server's URL does not begin
+    with `https`, your API Key could be intercepted and used by a malicious actor.
+    ::
+
+    Once you have an API Key, you can authenticate by passing the key with a prefix
+    of `"Key "` (the space is important) in the Authorization header.
+
+    Below are examples of invoking the "Get R Information" endpoint.
+
+    **cURL**
+    ```bash
+    curl -H "Authorization: Key XXXXXXXXXXX" \
+         https://rstudioconnect.example.com/__api__/v1/server_settings/r
+    ```
+
+    **R**
+    ```r
+    library(httr)
+    apiKey <- "XXXXXXXXXXX"
+    result <- GET("https://rstudioconnect.example.com/__api__/v1/server_settings/r",
+      add_headers(Authorization = paste("Key", apiKey)))
+    ```
+
+    **Python**
+    ```python
+    import requests
+    r = requests.get(
+      'https://rstudioconnect.example.com/__api__/v1/server_settings/r',
+      headers = { 'Authorization': 'Key XXXXXXXXXXX' }
+    )
+    ```
+  license:
+    name: Commercial
+    url: https://www.rstudio.com/about/eula/
+  termsOfService: See the RStudio EULA at https://www.rstudio.com/about/eula/ for
+    details.
+  title: RStudio Connect API Reference
+  version: 1.0.1
+servers:
+- url: /__api__
+security:
+- apiKey: []
+tags:
+- description: |
+    These endpoints let you obtain auditing information.
+  name: Audit Logs
+- description: |
+    These endpoints let you manage and obtain information about content
+    bundles.
+  name: Bundles
+  x-visibility: experimental
+- description: |
+    These endpoints let you manage and obtain information about content hosted
+    by RStudio Connect.
+  name: Content
+  x-visibility: experimental
+- description: |
+    These endpoints let you manage user groups.
+  name: Groups
+- description: |
+    The RStudio Connect server is instrumented to record usage data when users
+    access published content.
+
+    The instrumentation endpoints provide a REST API for the appropriate users
+    to query and retrieve the recorded usage data. This API supports
+    server-side filtering of the data results as well as a flexible paging
+    mechanism to handle large quantities of records. For further details on
+    this, see the documentation for each endpoint.
+
+    Code examples showing how to access the instrumentation data are in the
+    [User Activity](../cookbook/user-activity/) recipes within the RStudio
+    Connect API Cookbook.
+
+    The [sol-eng/usage](https://github.com/sol-eng/connect-usage) GitHub
+    repository contains an R Markdown dashboard that uses these
+    instrumentation APIs.
+  name: Instrumentation
+- description: |
+    These endpoints provide details about the server's
+    R installations.
+  name: R Information
+- description: |
+    These endpoints provide output and status about recent operations run by
+    RStudio Connect.
+  name: Tasks
+  x-visibility: experimental
+- description: |
+    These endpoints let you manage users.
+  name: Users
+paths:
+  /v1/audit_logs:
+    get:
+      description: |
+        This endpoint returns a portion of the audit logs, as well as
+        paging information that can be used to navigate the audit log
+        results.
+
+        ::alert info
+        This endpoint requires administrator access.
+        ::
+
+        This endpoint uses keyset pagination. The [Keyset
+        Pagination](../cookbook/pagination/#keyset-pagination) recipe in the
+        RStudio Connect API Cookbook has example code for fetching multiple
+        pages.
+      operationId: getAuditLogs
+      parameters:
+      - description: |
+          Number of logs to return. The minimum supported value is 1 and
+          maximum supported value is 500. Note that `limit` is a "best
+          effort" request since there may not be enough logs to satisfy the limit.
+        in: query
+        name: limit
+        schema:
+          default: 20
+          format: int32
+          maximum: 500
+          minimum: 1
+          type: integer
+      - description: |
+          Gets the previous page of audit logs relative to the given id.
+        in: query
+        name: previous
+        schema:
+          type: string
+      - description: |
+          Gets the next page of audit logs relative to the given id.
+        in: query
+        name: next
+        schema:
+          type: string
+      - description: |
+          Whether the audit logs should be listed in ascending order
+        in: query
+        name: ascOrder
+        schema:
+          default: true
+          type: boolean
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogs'
+          description: |
+            The audit logs results and paging information
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Get audit logs
+      tags:
+      - Audit Logs
+  /v1/experimental/content:
+    post:
+      description: |
+        Create a new content item.
+
+        Authenticated access from a user having either "publisher" or
+        "administrator" role is allowed. All other clients are rejected.
+      operationId: createContent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Content'
+        description: |
+          The request body required when creating a new content item.
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Content'
+          description: |
+            The details for the newly created content.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Create content item
+      tags:
+      - Content
+      x-visibility: experimental
+      x-codegen-request-body-name: content
+  /v1/experimental/content/{guid}:
+    delete:
+      description: |
+        Delete a specific content item.
+
+        On-disk data and database records are removed as a consequence of this call.
+      operationId: deleteContent
+      parameters:
+      - description: |
+          The unique identifier of the desired content item.
+        in: path
+        name: guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      responses:
+        "204":
+          content: {}
+          description: |
+            Returned when the content was successfully removed.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Delete content
+      tags:
+      - Content
+      x-visibility: experimental
+    get:
+      description: |
+        Get detailed information about a specific content item.
+
+        Unauthenticated clients are rejected regardless of the content access
+        type.
+
+        Authorized, non-administrator clients without viewership rights to
+        this content are rejected.
+
+        Authorized, administrator clients without viewership rights are
+        permitted to obtain information about this content. The computed
+        `role` for these users will be `none`, representing that these users
+        cannot view the content itself.
+
+        Authorized clients with viewership (or collaborator) rights are
+        permitted to obtain information about this content. The computed
+        `role` for these users will reflect the level of access.
+      operationId: getContent
+      parameters:
+      - description: |
+          The unique identifier of the desired content item.
+        in: path
+        name: guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Content'
+          description: |
+            The requested content details.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Get content details
+      tags:
+      - Content
+      x-visibility: experimental
+    post:
+      description: |
+        Update fields for a specific content item.
+
+        Authenticated access from a user having either "publisher" or
+        "administrator" role is allowed. All other clients are rejected.
+
+        Authorized clients with collaborator or administrator rights are
+        permitted to modify content item fields.
+      operationId: updateContent
+      parameters:
+      - description: |
+          The unique identifier of the desired content item.
+        in: path
+        name: guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Content'
+        description: |
+          The request body required when creating a new content item.
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Content'
+          description: |
+            The details for the newly created content.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Update content
+      tags:
+      - Content
+      x-visibility: experimental
+      x-codegen-request-body-name: content
+  /v1/experimental/content/{guid}/deploy:
+    post:
+      description: |
+        Deploy (activate) a deployment bundle.
+
+        Deployment requests spawn an asynchronous task to make your previously
+        uploaded data available for serving. The workflow applied to the
+        bundled files varies depending on the type of content.
+
+        Executable content has its environment reconstructed. This includes
+        using the `packrat` R package to install R package dependencies.
+
+        Documents (R Markdown reports, Jupyter Notebooks) are rendered and the
+        result made available.
+
+        Interactive content (Shiny applications, Plumber APIs) available to be
+        launched on the next client visit.
+
+        The deployment workflow for static content (HTML, plots) is
+        lighter-weight than for executable content. File time-stamps are
+        updated to ensure that browsers do not cache previous results and
+        instead see the newly promoted files.
+
+        The response from this endpoint includes a task identifier. Poll the
+        [`GET /experimental/tasks/{id}`](#getTask) endpoint to track the
+        progress of this task.
+      operationId: deployContentBundle
+      parameters:
+      - description: |
+          The unique identifier of the desired content item.
+        in: path
+        name: guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentDeploymentInstructions'
+        description: |
+          The request body when requesting the deployment of a bundle.
+        required: false
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentDeploymentTask'
+          description: |
+            The requested content details.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Deploy deployment bundle
+      tags:
+      - Content
+      x-visibility: experimental
+      x-codegen-request-body-name: instructions
+  /v1/experimental/content/{guid}/upload:
+    post:
+      description: |
+        Upload a new deployment bundle.
+
+        Upload a compressed `tar` archive containing code/data that represent
+        one deployment of this content. Bundles must be `gzip` compressed
+        `tar` archives.
+
+        All deployment bundles include a `manifest.json` describing the
+        contained files and their runtime dependencies.
+
+        A bundle for a Shiny application include an `app.R` or `ui.R`
+        and `server.R`, and any images or data files required by the
+        application.
+
+        An R Markdown document bundle includes the `index.Rmd` file along with
+        any R scripts and data files needed to render the report.
+
+        Bundles containing HTML content would include the CSS, Javascript, and
+        images required by that document.
+
+        The archive paths for the `manifest.json` file and primary source
+        files like `app.R` or `index.Rmd` must not specify a directory
+        structure. Directories may be used for secondary data and scripts.
+
+        Here is how you might use `tar` to create an archive for a Shiny
+        application. It includes the manifest, the application, and an image.
+
+        ```bash
+        tar zcf bundle.tar.gz ./manifest.json ./app.R ./www/logo.png
+        ```
+
+        Here is another example of creating a bundle for that same application
+        but from its parent directory. The Shiny application is in a
+        `sales-analyzer` sub-directory.
+
+        ```bash
+        tar -C sales-analyzer zcf bundle.tar.gz .
+        ```
+
+        Both `tar` commands will produce an archive with the `manifest.json`
+        and `app.R` at the top-most level.
+
+        Publishers with collaborator rights to this content (including the
+        owner) are permitted to upload deployment bundles. Users without these
+        rights are rejected.
+
+        Administrators must be a collaborator for a content item before they
+        receive upload rights.
+      operationId: uploadContentBundle
+      parameters:
+      - description: |
+          The unique identifier of the desired content item.
+        in: path
+        name: guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - description: |
+          The MD5 sum of the archive file.
+        in: header
+        name: X-Content-Checksum
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              format: binary
+              type: string
+        description: |
+          A `gzip` compressed `tar` archive file.
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentUploadBundle'
+          description: |
+            The requested content details.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Upload deployment bundle
+      tags:
+      - Content
+      x-visibility: experimental
+      x-codegen-request-body-name: archive
+  /v1/instrumentation/content/visits:
+    get:
+      description: |
+        This endpoint returns a portion of the visit (or "hits") information for
+        renderend and static content.  Rendered content includes R Markdown (both
+        with and without parameters), Jupyter Notebooks, etc.  Static content
+        includes plots, spreadsheets, sites, etc.  This endpoint does not return
+        information on Shiny applications, plumber APIs or TensorFlow models.  The
+        results returned include paging details that can be used to navigate the
+        information this endpoint returns.
+
+        The information returned is based on data collected by RStudio Connect as
+        users visit rendered and static content.
+
+        ::alert warning
+        Prior to the release of this API, there was an issue with how visits were returned
+        that caused extra entries to be stored under certain circumstances.  These will
+        affect analyses that interpret visit counts.  Entries that were recorded before
+        the issue was addressed are not returned by default.  If you desire these
+        records, specify the `min_data_version` filter with a value of 0.
+        ::
+
+        ::alert info
+        This endpoint requires administrator or publisher access.
+        ::
+
+        #### Filtering of results:
+
+        There are several ways the result set can be filtered by the server before
+        being sent back within the API response. If multiple filters are in effect,
+        they will be logically ANDed together.
+
+        ##### Implicit Filtering
+        If the user calling the endpoint is a publisher, the data returned will be
+        limited to the content owned by the user.
+
+        ##### Time Windows
+
+        This API accepts optional `from` and `to` timestamps to define a window of
+        interest.  If `from` is not specified, it is assumed to be before the earliest
+        recorded information.  If `to` is not specified, it is assumed to be "now".
+
+        Any visit to content that falls inclusively within the time window will be
+        part of the result set.
+
+        #### Responses
+
+        The response of a call will contain zero or more data records representing a visit
+        by a user to a piece of content.  No more than `limit` records will be returned.
+        Multiple requests of this endpoint are typically required to retrieve the complete
+        result set from the server.  To facilitate this, each response includes a paging
+        object containing full URL links which can be requested to iteratively move forward
+        or backward through multiple response pages.
+      operationId: getContentVisits
+      parameters:
+      - description: |
+          Filter results by content GUID.
+
+          This parameter will limit the results to include only the access records
+          for content matching the content GUID filter value.
+
+          Example value = `6f300623-1e0c-48e6-a473-ddf630c0c0c3` using UUID
+          [RFC4122](https://tools.ietf.org/html/rfc4122) format.
+
+          Multiple content GUIDs may be specified using the bar character `|` which
+          represents a logical OR across the surounding GUIDs.  For example,
+          `content_guid=6f300623-1e0c-48e6-a473-ddf630c0c0c3|e08a86af-a262-4152-8366-f2d8ec3c54f9`
+          will filter the result set to only the access records for content with a GUID
+          of `6f300623-1e0c-48e6-a473-ddf630c0c0c3` or a GUID of `e08a86af-a262-4152-8366-f2d8ec3c54f9`.
+
+          ::alert info
+
+          - The GUID associated with published content can be found on the Info panel for
+            the content within the RStudio Connect Dashboard window.
+          - Note that if you specify the `content_guid` more than once like this,
+            `content_guid=6f300623-1e0c-48e6-a473-ddf630c0c0c3&content_guid=&e08a86af-a262-4152-8366-f2d8ec3c54f9`
+            you will receive results for the first GUID only; the 2nd and subsequent `content_guid`
+            fields are ignored.
+          - Note that there is a practical limit of around 40 to the number of GUIDs that
+            may be specified due to the length of a html query string.
+
+          ::
+        in: query
+        name: content_guid
+        schema:
+          format: uuid
+          type: string
+      - description: |
+          Filter by data version.  Records with a data version lower than the
+          given value will be excluded from the set of results.
+
+          The [Rendered and Static Content Visit
+          Events](../admin/historical-information/#rendered-and-static-content-visit-events)
+          section of the RStudio Connect Admin Guide explains how to
+          interpret `data_version` values.
+        in: query
+        name: min_data_version
+        schema:
+          default: 1
+          format: int32
+          type: integer
+      - description: |
+          The timestamp that starts the time window of interest.  Any visit information
+          that happened prior to this timestamp will not be returned.
+
+          Example value = `2018-09-15T18:00:00Z` using [RFC3339](https://tools.ietf.org/html/rfc3339)
+          format of (`yyyy-mm-ddThh:mm:ss` followed by either `-##:##`, `.##Z` or `Z`)
+        in: query
+        name: from
+        schema:
+          format: date-time
+          type: string
+      - description: |
+          The timestamp that ends the time window of interest.  Any visit information
+          that happened after this timestamp will not be returned.
+
+          Example value = `2018-09-15T18:00:00Z` using [RFC3339](https://tools.ietf.org/html/rfc3339)
+          format of (`yyyy-mm-ddThh:mm:ss` followed by either `-##:##`, `.##Z` or `Z`)
+        in: query
+        name: to
+        schema:
+          format: date-time
+          type: string
+      - description: |
+          The number of records to return.  The minimum supported value is 1 and maximum
+          supported value is 500.  Note that `limit` is a "best effort" request since
+          there may not be enough visit entries to satisfy the limit.
+        in: query
+        name: limit
+        schema:
+          default: 20
+          format: int32
+          maximum: 500
+          minimum: 1
+          type: integer
+      - description: |
+          Retrieve the previous page of content visit logs relative to the provided
+          value.  This value corresponds to an internal reference within the server and
+          should be sourced from the appropriate attribute within the paging object of
+          a previous response.
+        in: query
+        name: previous
+        schema:
+          type: string
+      - description: |
+          Retrieve the next page of content visit logs relative to the provided
+          value.  This value corresponds to an internal reference within the server and
+          should be sourced from the appropriate attribute within the paging object of
+          a previous response.
+        in: query
+        name: next
+        schema:
+          type: string
+      - description: |
+          Determines if the response records should be listed in ascending or descending
+          order within the response.  Ordering is by the `started` timestamp field.
+        in: query
+        name: asc_order
+        schema:
+          default: true
+          type: boolean
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentVisitLogs'
+          description: |
+            The content visit results and paging information
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Get Content Visits
+      tags:
+      - Instrumentation
+  /v1/instrumentation/shiny/usage:
+    get:
+      description: |
+        This endpoint returns a portion of the Shiny application usage information,
+        as well as paging details that can be used to navigate that information.
+
+        The information returned is based on data collected by RStudio Connect as
+        users visit Shiny applications.  Because of how visits are detected, end
+        times will be slightly inflated by a reconnect timeout, generally around
+        15 seconds.
+
+        ::alert warning
+        Prior to the release of this API, there was an issue with how visits were
+        recorded that caused extra entries to be stored.  These will affect analyses
+        that interpret visit counts or durations.  Entries that were recorded before
+        the issue was addressed are not returned by default.  If you desire these
+        records, specify the `min_data_version` filter with a value of 0.
+        ::
+
+        ::alert info
+
+        - Because of how visits are detected, end times will be slightly inflated by the
+          currently configured client reconnect timeout, which defaults to 15 seconds.
+          The ending time may also be affected by connect and read timeout
+          settings.
+
+          The [Shiny Application
+          Events](../admin/historical-information/#shiny-application-events)
+          section of the RStudio Connect Admin Guide has more details about
+          how these events are collected.
+        - This endpoint requires administrator or publisher access.
+
+        ::
+
+        #### Filtering of results:
+
+        There are several ways the result set can be filtered by the server before
+        being sent back within the API response. If multiple filters are in effect,
+        they will be logically ANDed together.
+
+        ##### Implicit Filtering
+
+        If the user calling the endpoint is a publisher, the data returned will be
+        limited to those applications owned by the user.
+
+        ##### Time Windows
+
+        This API accepts optional `from` and `to` timestamps to define a window of
+        interest.  If `from` is not specified, it is assumed to be before the earliest
+        recorded information.  If `to` is not specified, it is assumed to be "now".
+
+        Any visit to content that falls inclusively within the time window will be
+        part of the result set.
+
+        #### Responses
+
+        The response of a call will contain zero or more data records representing a session
+        by a user of a Shiny application.  No more than `limit` records will be returned.
+        Multiple requests of this endpoint are typically required to retrieve the complete
+        result set from the server.  To facilitate this, each response includes a paging
+        object containing full URL links which can be requested to iteratively move forward
+        or backward through multiple response pages.
+      operationId: getShinyAppUsage
+      parameters:
+      - description: |
+          Filter results by content GUID.
+
+          This parameter will limit the results to include only the access records
+          for the Shiny application(s) matching the content GUID filter value.
+
+          Example value = `6f300623-1e0c-48e6-a473-ddf630c0c0c3` using UUID
+          [RFC4122](https://tools.ietf.org/html/rfc4122) format.
+
+          Multiple content GUIDs may be specified using the bar character `|` which
+          represents a logical OR across the surounding GUIDs.  For example,
+          `content_guid=6f300623-1e0c-48e6-a473-ddf630c0c0c3|e08a86af-a262-4152-8366-f2d8ec3c54f9`
+          will filter the result set to only the access records for the Shiny Applications
+          with a GUID of `6f300623-1e0c-48e6-a473-ddf630c0c0c3` or a GUID of
+          `e08a86af-a262-4152-8366-f2d8ec3c54f9`.
+
+          ::alert info
+
+          - The GUID associated with a published Shiny application can be found on the
+            Info panel for the application within the RStudio Connect Dashboard window.
+          - Note that if you specify the `content_guid` more than once like this,
+            `content_guid=6f300623-1e0c-48e6-a473-ddf630c0c0c3&content_guid=&e08a86af-a262-4152-8366-f2d8ec3c54f9`
+            you will receive results for the first GUID only; the 2nd and subsequent `content_guid`
+            fields are ignored.
+          - Note that there is a practical limit of around 40 to the number of GUIDs that
+            may be specified due to the length of a html query string.
+
+          ::
+        in: query
+        name: content_guid
+        schema:
+          format: uuid
+          type: string
+      - description: |
+          Filter by data version.  Records with a data version lower than the
+          given value will be excluded from the set of results.
+
+          The [Shiny Application
+          Events](../admin/historical-information/#shiny-application-events)
+          section of the RStudio Connect Admin Guide explains how to
+          interpret `data_version` values.
+        in: query
+        name: min_data_version
+        schema:
+          default: 1
+          format: int32
+          type: integer
+      - description: |
+          The timestamp that starts the time window of interest.  Any usage information
+          that _ends_ prior to this timestamp will not be returned.  Individual records
+          may contain a starting time that is before this if they end after it or have
+          not finished.
+
+          Example value = `2018-09-15T18:00:00Z` using [RFC3339](https://tools.ietf.org/html/rfc3339)
+          format of (`yyyy-mm-ddThh:mm:ss` followed by either `-##:##`, `.##Z` or `Z`)
+        in: query
+        name: from
+        schema:
+          format: date-time
+          type: string
+      - description: |
+          The timestamp that ends the time window of interest.  Any usage information
+          that _starts_ after this timestamp will not be returned.  Individual records
+          may contain an ending time that is after this (or no ending time) if they start
+          before it.
+
+          Example value = `2018-09-15T18:00:00Z` using [RFC3339](https://tools.ietf.org/html/rfc3339)
+          format of (`yyyy-mm-ddThh:mm:ss` followed by either `-##:##`, `.##Z` or `Z`)
+        in: query
+        name: to
+        schema:
+          format: date-time
+          type: string
+      - description: |
+          The number of records to return.  The minimum supported value is 1 and maximum
+          supported value is 500.  Note that `limit` is a "best effort" request since
+          there may not be enough usage entries to satisfy the limit.
+        in: query
+        name: limit
+        schema:
+          default: 20
+          format: int32
+          maximum: 500
+          minimum: 1
+          type: integer
+      - description: |
+          Retrieve the previous page of Shiny application usage logs relative to the
+          provided value.  This value corresponds to an internal reference within the
+          server and should be sourced from the appropriate attribute within the paging
+          object of a previous response.
+        in: query
+        name: previous
+        schema:
+          type: string
+      - description: |
+          Retrieve the next page of Shiny application usage logs relative to the provided
+          value.  This value corresponds to an internal reference within the server and
+          should be sourced from the appropriate attribute within the paging object of
+          a previous response.
+        in: query
+        name: next
+        schema:
+          type: string
+      - description: |
+          Determines if the response records should be listed in ascending or descending
+          order within the response.  Ordering is by the `started` timestamp field.
+        in: query
+        name: asc_order
+        schema:
+          default: true
+          type: boolean
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShinyAppUsageLogs'
+          description: |
+            The Shiny application usage results and paging information
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Get Shiny App Usage
+      tags:
+      - Instrumentation
+  /v1/server_settings/r:
+    get:
+      description: |
+        This endpoint returns a list of metadata objects for each installed version of
+        R that RStudio Connect can run.
+
+        ::alert info
+        This endpoint requires authentication and is only available to
+        `publisher` and `administrator` roles.
+        ::
+
+        The [R Versions
+        Available](../cookbook/system-information/#available-r-versions)
+        recipe in the RStudio Connect API Cookbook contains a recipe with
+        sample code.
+      operationId: getRInformation
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RInstallations'
+          description: |
+            An object containing metadata about each installation of R.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Get R Information
+      tags:
+      - R Information
+  /v1/users:
+    get:
+      description: |
+        This endpoint lists local users. When called with a prefix
+        parameter, it searches for local users matching the prefix.
+
+        Results are sorted by first name, then last name, then
+        username, then email. `prefix` searches are first sorted based
+        on similarity to the prefix and then by first name, last
+        name, username, email.
+
+        ::alert info
+
+        - Administrator access is required for filtering by
+          `account_status`.
+        - The `email` field is not populated for non-admins when
+          `Server.HideEmailAddresses` is enabled.
+        - When the user making the request is a viewer and
+          `Authorization.ViewersCanOnlySeeThemselves` is being used,
+          the results contain only the given user.
+
+        ::
+
+        #### Pagination
+
+        This endpoint uses offset pagination (using page numbers). The [Offset
+        Pagination](../cookbook/pagination/#offset-pagination) recipe in the
+        RStudio Connect API Cookbook has sample code for fetching multiple
+        pages from a list endpoint.
+
+        Note that searching by `prefix` will always return the first
+        page of results.
+      operationId: getUsers
+      parameters:
+      - description: |
+          Filters users by prefix (username, first name, or last
+          name). The filter is case insensitive.
+        in: query
+        name: prefix
+        schema:
+          type: string
+      - description: |
+          Filter by user role. "|" represents logical OR. For example,
+          `user_role=viewer|publisher` means users who are either a
+          viewer or a publisher will be included in the result.
+
+          Note that for `user_role`, logical AND is also supported but
+          always returns no results. For example,
+          `user_role=viewer&user_role=publisher` tries to return users
+          who are both viewers and publishers.
+        in: query
+        name: user_role
+        schema:
+          enum:
+          - administrator
+          - publisher
+          - viewer
+          type: string
+      - description: |
+          Filter by account status. "|" represents logical OR. For
+          example, `account_status=locked|licensed` means users who
+          are either locked or licensed.
+          - `locked` - Users with a locked account.
+          - `licensed` - Users regarded as licensed (unlocked and
+            recently active).
+          - `inactive` - Users not locked and not recently active.
+
+          Note that for `account_status`, logical AND is also
+          supported but always returns no results. For example,
+          `account_status=locked&account_status=licensed` tries to
+          return users who are both locked and licensed.
+        in: query
+        name: account_status
+        schema:
+          enum:
+          - locked
+          - licensed
+          - inactive
+          type: string
+      - description: |
+          The page to return relative to the given `page_size`. If
+          `page_number` is 0 or negative, an error will be returned.
+        in: query
+        name: page_number
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: |
+          The number of items to include in each page. This parameter
+          is "best effort" since there may not be enough users to
+          honor the request. If `page_size` is less than 1 or greater
+          than 500, an error will be returned.
+        in: query
+        name: page_size
+        schema:
+          default: 20
+          format: int32
+          maximum: 500
+          minimum: 1
+          type: integer
+      - description: |
+          Whether or not to return the users in ascending order,
+          sorted by first name, last name, username, and email.
+        in: query
+        name: asc_order
+        schema:
+          default: true
+          type: boolean
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Users'
+          description: |
+            The search results
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: List or search for user details
+      tags:
+      - Users
+    post:
+      description: |
+        This endpoint creates the given user.
+
+        ::alert info
+
+        - This endpoint is used only for SAML, password, PAM, and proxied
+          authentication. All other authentication providers should
+          use the [`PUT /users`](#createPullUser) endpoint.
+        - Administrator access is required to create *other* users.
+
+        ::
+
+        #### Initial User Creation Workflow
+
+        This endpoint requires authentication to create *other* users,
+        which means that you need an API Key for access. How do you
+        get an API Key if there are no users in RStudio Connect?
+
+        - For password authentication, you can use this endpoint
+          without an API Key to create the first user. The first user
+          will be an administrator.
+        - For SAML, PAM or proxied authentication, the first user can be
+          created by logging into RStudio Connect. The API cannot be used.
+
+        Once the first user is created, an API Key can be used to access this
+        endpoint and create subsequent users. The [API
+        Keys](../user/api-keys/) chapter of the RStudio Connect User Guide
+        explains how to create an API Key.
+
+        #### All Authentication Providers
+
+        - When `user_role` is not specified, it will default to the
+          role specified by the config setting
+          `Authorization.DefaultUserRole`.
+
+        #### SAML, PAM and Proxied Authentication
+
+        - An API Key must always be used. Users cannot use this
+          endpoint to create their own account.
+        - Administrator access is always required to create accounts.
+
+        #### Password Authentication
+
+        - Users must confirm their account through an email. This
+          feature is unique to password authentication.
+        - Administrator access is always required except for the first
+          created user.
+      operationId: createPushUser
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_1'
+        content:
+          application/json:
+            schema:
+              example:
+                username: john_doe
+                first_name: John
+                last_name: Doe
+                user_role: viewer
+                user_must_set_password: false
+                email: john_doe@rstudio.com
+                unique_id: string
+              properties:
+                username:
+                  description: |
+                    The user's desired username
+                  example: john_doe
+                  type: string
+                first_name:
+                  description: |
+                    The user's first name
+                  example: John
+                  type: string
+                last_name:
+                  description: |
+                    The user's last name
+                  example: Doe
+                  type: string
+                user_role:
+                  description: |
+                    The user's role. If `null` it will default to the
+                    role specified by the config setting
+                    `Authorization.DefaultUserRole`.
+                  enum:
+                  - administrator
+                  - publisher
+                  - viewer
+                  example: viewer
+                  nullable: true
+                  type: string
+                user_must_set_password:
+                  default: false
+                  description: |
+                    Applies only to password authentication.
+
+                    - When `true`, the created user will be asked to set
+                    their password on first login. The `password`
+                    request parameter cannot be set when this parameter
+                    is `true`.
+                    - When `false`, you must specify the
+                    `password`.
+                  type: boolean
+                password:
+                  description: |
+                    Applies only to password authentication. Must be at
+                    least 6 characters long. Cannot be set when
+                    `user_must_set_password` is true.
+                  type: string
+                email:
+                  description: |
+                    The user's email.
+                  example: john_doe@rstudio.com
+                  format: email
+                  type: string
+                unique_id:
+                  description: |
+                    Applies only to proxied authentication when `ProxyAuth.UniqueIdHeader`
+                    is being used.  It is required when SAML authentication is being used.
+                  type: string
+              required:
+              - username
+              type: object
+        description: |
+          The new user values.
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: |
+            The user object
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The request could not be completed due to a conflict.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: |
+        Create a user from caller-supplied details (SAML, password, PAM, proxied)
+      tags:
+      - Users
+      x-visibility: public
+      x-codegen-request-body-name: user
+    put:
+      description: |
+        This endpoint creates the given user on the RStudio Connect server.
+
+        ::alert info
+
+        - This endpoint is used only for LDAP and OAuth2
+          authentication. All other authentication providers should
+          use the [`POST /users`](#createPushUser) endpoint.
+        - Unlike the [`POST /users`](#createPushUser) endpoint,
+          publisher or administrator access is required to access this
+          endpoint.
+
+        ::
+
+        #### User Creation Workflow on LDAP and OAuth2
+
+        This endpoint requires authentication, which means that you need an
+        API Key for access. How do you get an API Key if there are no users in
+        RStudio Connect? The first user can be created by simply logging into
+        RStudio Connect. The RStudio Connect Server API cannot be used to
+        create the first user. Once logged in, you can create an API Key.
+
+        For LDAP and OAuth2, the API lets you identify an existing
+        user in the LDAP or OAuth2 system and create a corresponding
+        account on RStudio Connect. This is a two-step process:
+
+        - Use the [`GET /users/remote`](#searchRemoteUsers) endpoint. This
+          endpoint will return a list of potential matching accounts
+          in LDAP or OAuth2. A user with no account on RStudio Connect will
+          lack a `guid`. Note the `temp_ticket` for the desired user
+          account.
+        - Use this PUT endpoint with the `temp_ticket` to create a
+          corresponding account on RStudio Connect.
+
+        The [Create a User from
+        LDAP/OAuth](../cookbook/users/#create-user-ldap-oauth2) recipe in the
+        API Cookbook has sample code using this workflow.
+
+        #### LDAP and OAuth2 Authentication
+
+        - The created user role will default to the role specified by
+          the config setting `Authorization.DefaultUserRole`.
+      operationId: createPullUser
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object'
+        content:
+          application/json:
+            schema:
+              example: {}
+              properties:
+                temp_ticket:
+                  description: |
+                    The temporary ticket used for creating a user on the RStudio
+                    Connect server. It is obtained from the [`GET
+                    /users/remote`](#searchRemoteUsers) endpoint.
+                  type: string
+              required:
+              - temp_ticket
+              type: object
+        description: |
+          The request body needed for creating a user on the RStudio Connect
+          server.
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: |
+            The user object
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The request could not be completed due to a conflict.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: |
+        Create a user using details from a remote authentication provider (LDAP, OAuth2)
+      tags:
+      - Users
+      x-visibility: public
+      x-codegen-request-body-name: request
+  /v1/users/remote:
+    get:
+      description: |
+        This endpoint is used to support operations against users who
+        do not have an RStudio Connect account, such as [creating LDAP and
+        OAuth2 users](#createPullUser). See
+        [`GET /users`](#getUsers) for listing users.
+
+        This endpoint searches for users on RStudio Connect and on
+        your LDAP or OAuth2 system.
+
+        Results are first sorted based on similarity to the `prefix`
+        and then by first name, last name, username, and email.
+
+        ::alert info
+
+        - This endpoint can be used only by LDAP or OAuth2
+          authentication and will return an error otherwise.
+        - Publisher or administrator access is required to access this
+          endpoint.
+        - The `email` field is not populated for non-admins when
+          `Server.HideEmailAddresses` is enabled.
+        - When the user making the request is a viewer and
+          `Authorization.ViewersCanOnlySeeThemselves` is being used,
+          the results contain only the given user.
+
+        ::
+      operationId: searchRemoteUsers
+      parameters:
+      - description: |
+          Search users by prefix (username, first name, or last
+          name). `prefix` is case insensitive.
+        in: query
+        name: prefix
+        required: true
+        schema:
+          type: string
+      - description: |
+          The maximum number of users to include in the results. If
+          `limit` is less than 1 or greater than 500, an error
+          will be returned.
+        in: query
+        name: limit
+        schema:
+          default: 20
+          format: int32
+          maximum: 500
+          minimum: 1
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoteSearchResults'
+          description: |
+            The search results.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Search for user details from a remote provider
+      tags:
+      - Users
+      x-visibility: public
+  /v1/users/{guid}:
+    get:
+      description: |
+        Get detailed information on a specific user.
+
+        ::alert info
+        The `email` field is not populated for non-admins when
+        `Server.HideEmailAddresses` is enabled.
+        ::
+      operationId: getUser
+      parameters:
+      - description: |
+          The user's GUID, or unique identifier
+
+          Example value = `6f300623-1e0c-48e6-a473-ddf630c0c0c3`
+          using UUID [RFC4122](https://tools.ietf.org/html/rfc4122) format.
+        in: path
+        name: guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: |
+            The requested user details.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Get user details
+      tags:
+      - Users
+      x-visibility: public
+    put:
+      description: |
+        This endpoint updates a given user and returns the updated
+        user properties. Note that it returns only the properties that
+        can be modified by this endpoint.
+
+        ::alert info
+        If the authentication provider allows it:
+
+        - a user can change their own user properties.
+        - another user's properties can be changed with administrator
+          access.
+        - The configuration setting `Authorization.UserInfoEditableBy`
+          controls whether or not non-admins can edit their own properties.
+
+        ::
+
+        #### Password Authentication
+
+        - Emails are required.
+        - Changing an unconfirmed user's email will cause the
+          confirmation email to be resent to the new email.
+      operationId: updateUser
+      parameters:
+      - description: |
+          The user's GUID, or unique identifier
+
+          Example value = `6f300623-1e0c-48e6-a473-ddf630c0c0c3`
+          using UUID [RFC4122](https://tools.ietf.org/html/rfc4122) format.
+        in: path
+        name: guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_2'
+        content:
+          application/json:
+            schema:
+              example:
+                username: john_doe
+                first_name: John
+                last_name: Doe
+                email: john_doe@rstudio.com
+                user_role: viewer
+              properties:
+                username:
+                  description: |
+                    The user's new username
+                  example: john_doe
+                  type: string
+                first_name:
+                  description: |
+                    The user's new first name
+                  example: John
+                  type: string
+                last_name:
+                  description: |
+                    The user's new last name
+                  example: Doe
+                  type: string
+                email:
+                  description: |
+                    The user's new email.
+                  example: john_doe@rstudio.com
+                  format: email
+                  type: string
+                user_role:
+                  description: |
+                    The user's new role. Note that you can only
+                    downgrade yourself. Administrators can change other
+                    users' roles to any valid role.
+                  enum:
+                  - administrator
+                  - publisher
+                  - viewer
+                  example: viewer
+                  type: string
+              type: object
+        description: |
+          The new user values.
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EditableUser'
+          description: |
+            The latest user properties that can be modified by this
+            endpoint.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The request could not be completed due to a conflict.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Update a user
+      tags:
+      - Users
+      x-visibility: public
+      x-codegen-request-body-name: user
+  /v1/users/{guid}/lock:
+    post:
+      description: |
+        This endpoint locks or unlocks a given user account.
+
+        ::alert info
+
+        - License limits are taken into account when unlocking a user.
+        - Administrator access is required to access this endpoint.
+        - You cannot lock or unlock yourself.
+
+        ::
+      operationId: lockUser
+      parameters:
+      - description: |
+          The user's GUID, or unique identifier
+
+          Example value = `6f300623-1e0c-48e6-a473-ddf630c0c0c3`
+          using UUID [RFC4122](https://tools.ietf.org/html/rfc4122) format.
+        in: path
+        name: guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_3'
+        content:
+          application/json:
+            schema:
+              example:
+                locked: false
+              properties:
+                locked:
+                  description: |
+                    Whether or not the user should be locked.
+                  type: boolean
+              required:
+              - locked
+              type: object
+        description: |
+          The lock request
+        required: true
+      responses:
+        "200":
+          content: {}
+          description: |
+            This response is returned only when the lock/unlock
+            request is successful.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Lock a user
+      tags:
+      - Users
+      x-codegen-request-body-name: request
+  /v1/groups:
+    get:
+      description: |
+        This endpoint lists or searches for local groups.
+
+        - For a `prefix` search, results are sorted based on
+          similarity to the `prefix`. A `prefix` search ignores
+          `asc_order`. The first page of results will always be
+          returned.
+        - For a non-`prefix` search, results are sorted by group name.
+        - For LDAP authentication, this endpoint executes an
+          unbounded LDAP query. Instead, `page_size` is applied
+          locally by RStudio Connect.
+
+        ::alert info
+        This endpoint is available only when groups are enabled
+        in RStudio Connect and it will return an error otherwise.
+        ::
+
+        #### Pagination
+
+        This endpoint uses offset pagination (using page numbers). The [Offset
+        Pagination](../cookbook/pagination/#offset-pagination) recipe in the
+        RStudio Connect API Cookbook has sample code for fetching multiple
+        pages from a list endpoint.
+      operationId: getGroups
+      parameters:
+      - description: |
+          Filters groups by prefix (group name). The filter is case
+          insensitive.
+        in: query
+        name: prefix
+        schema:
+          type: string
+      - description: |
+          The page to return relative to the given `page_size`. If
+          `page_number` is 0 or negative, an error will be returned.
+          For a `prefix` search, the first page of results will always
+          be returned.
+        in: query
+        name: page_number
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: |
+          The number of items to include in each page. This parameter
+          is "best effort" since there may not be enough groups to
+          honor the request. If `page_size` is less than 1 or greater
+          than 500, an error will be returned.
+        in: query
+        name: page_size
+        schema:
+          default: 20
+          format: int32
+          maximum: 500
+          minimum: 1
+          type: integer
+      - description: |
+          Whether or not to return the groups in ascending order,
+          sorted by name. For a `prefix` search, results are sorted
+          first by exact match, then by increasing word length.
+        in: query
+        name: asc_order
+        schema:
+          default: true
+          type: boolean
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Groups'
+          description: |
+            The search results
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: List or search for group details
+      tags:
+      - Groups
+      x-visibility: public
+    post:
+      description: |
+        This endpoint creates the given group.
+
+        ::alert info
+
+        - This endpoint is available only when groups are enabled
+          in RStudio Connect and only for Password, PAM, OAuth2,
+          SAML and Proxied authentication.
+        - Publisher or administrator access is required to create
+          groups.
+
+        ::
+      operationId: createGroup
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_5'
+        content:
+          application/json:
+            schema:
+              example:
+                name: marketing
+              properties:
+                name:
+                  description: |
+                    The group's desired name
+                  example: marketing
+                  type: string
+              required:
+              - name
+              type: object
+        description: |
+          The new group values.
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: |
+            The group object
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The request could not be completed due to a conflict.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: |
+        Create a group from caller-supplied details (Password, PAM, OAuth2, SAML, Proxied)
+      tags:
+      - Groups
+      x-visibility: public
+      x-codegen-request-body-name: group
+    put:
+      description: |
+        This endpoint creates the given group on the RStudio Connect server.
+
+        ::alert info
+
+        - This endpoint is used only for LDAP authentication. Password,
+          PAM, SAML, OAuth2 and Proxied authentication providers should
+          use the [`POST /groups`](#createGroup) endpoint.
+        - Publisher or administrator access is required to access this
+          endpoint.
+
+        ::
+
+        #### Group Creation Workflow on LDAP
+
+        The API lets you identify an existing group in the LDAP system
+        and create a corresponding group on RStudio Connect. This is a
+        two-step process:
+
+        - Use the [`GET /groups/remote`](#searchRemoteGroups)
+          endpoint. This endpoint will return a list of potential
+          matching groups in LDAP. A group that does not exist in
+          RStudio Connect will lack a `guid`. Note the `temp_ticket`
+          for the desired group.
+        - Use this PUT endpoint with the `temp_ticket` to create a
+          corresponding group on RStudio Connect.
+
+        The [Create a Group from LDAP](../cookbook/groups/#create-group-ldap)
+        recipe in the API Cookbook has sample code using this workflow.
+      operationId: createRemoteGroup
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_4'
+        content:
+          application/json:
+            schema:
+              example: {}
+              properties:
+                temp_ticket:
+                  description: |
+                    The temporary ticket used for creating a group on the
+                    RStudio Connect server. It is obtained from the [`GET
+                    /groups/remote`](#searchRemoteGroups) endpoint.
+                  type: string
+              required:
+              - temp_ticket
+              type: object
+        description: |
+          The request body needed for creating a group on the RStudio Connect
+          server.
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: |
+            The group object
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The request could not be completed due to a conflict.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: |
+        Create a group using details from a remote authentication provider
+        (LDAP)
+      tags:
+      - Groups
+      x-visibility: public
+      x-codegen-request-body-name: request
+  /v1/groups/remote:
+    get:
+      description: |
+        This endpoint is used to support operations against groups not
+        managed by Connect, such as [creating LDAP
+        groups](#createGroup). See [`GET /groups`](#getGroups) for
+        listing groups on RStudio Connect.
+
+        This endpoint searches for groups on RStudio Connect and on
+        your LDAP system.
+
+        Results are sorted based on similarity to the `prefix`.
+
+        ::alert info
+
+        - This endpoint can be used only by LDAP authentication and
+          will return an error otherwise.
+        - Publisher or administrator access is required to access this
+          endpoint.
+
+        ::
+      operationId: searchRemoteGroups
+      parameters:
+      - description: |
+          Search groups by prefix. `prefix` is case insensitive.
+        in: query
+        name: prefix
+        required: true
+        schema:
+          type: string
+      - description: |
+          The maximum number of groups to include in the results. If
+          `limit` is less than 1 or greater than 500, an error
+          will be returned.
+        in: query
+        name: limit
+        schema:
+          default: 20
+          format: int32
+          maximum: 500
+          minimum: 1
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupRemoteSearch'
+          description: |
+            The search results.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Search for group details from a remote provider
+      tags:
+      - Groups
+      x-visibility: public
+  /v1/groups/{group_guid}/members:
+    get:
+      description: |
+        This endpoint gets the group member details. Group member
+        enumeration is currently not supported for LDAP.
+
+        ::alert info
+
+        - This endpoint is available only when groups are enabled
+          in RStudio Connect and only for Password, PAM, OAuth2,
+          SAML and Proxied authentication.
+        - The `email` field is not populated for non-admins when
+          `Server.HideEmailAddresses` is enabled.
+
+        ::
+      operationId: getGroupMembers
+      parameters:
+      - description: |
+          The group's unique identifier
+        in: path
+        name: group_guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMembers'
+          description: |
+            The requested group member details.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Get group member details
+      tags:
+      - Groups
+      x-visibility: public
+    post:
+      description: |
+        This endpoint adds a user to a group.
+
+        ::alert info
+
+        - This endpoint is available only when groups are enabled
+          in RStudio Connect and only for Password, PAM, OAuth2,
+          SAML and Proxied authentication.
+        - Administrator access is required to modify a group you do
+          not own.
+
+        ::
+      operationId: addGroupMember
+      parameters:
+      - description: |
+          The group's unique identifier
+        in: path
+        name: group_guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      requestBody:
+        $ref: '#/components/requestBodies/inline_object_6'
+        content:
+          application/json:
+            schema:
+              example:
+                user_guid: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+              properties:
+                user_guid:
+                  description: |
+                    The user's unique identifier
+                  example: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+                  format: uuid
+                  type: string
+              required:
+              - user_guid
+              type: object
+        description: |
+          The user to add as a member
+        required: true
+      responses:
+        "204":
+          content: {}
+          description: |
+            This response is returned only when the user was
+            successfully added to the group.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The request could not be completed due to a conflict.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Add a group member
+      tags:
+      - Groups
+      x-visibility: public
+      x-codegen-request-body-name: user
+  /v1/groups/{group_guid}/members/{user_guid}:
+    delete:
+      description: |
+        This endpoint removes a user from a group.
+
+        ::alert info
+
+        - This endpoint is available only when groups are enabled
+          in RStudio Connect and only for Password, PAM, OAuth2,
+          SAML and Proxied authentication.
+        - Administrator access is required to remove a user from a
+          group you do not own, but no special access is needed to
+          remove yourself from a group.
+
+        ::
+      operationId: removeGroupMember
+      parameters:
+      - description: |
+          The group's unique identifier
+        in: path
+        name: group_guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - description: |
+          The group member's unique identifier
+        in: path
+        name: user_guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      responses:
+        "204":
+          content: {}
+          description: |
+            This response is returned only when the user was
+            successfully removed from the group.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Remove a group member
+      tags:
+      - Groups
+      x-visibility: public
+  /v1/groups/{guid}:
+    delete:
+      description: |
+        Delete the given group.
+
+        ::alert info
+
+        - This endpoint can be used only when groups are enabled in
+          RStudio Connnect and will return an error otherwise.
+        - Administrator access is required to delete a group you do
+          not own.
+
+        ::
+      operationId: deleteGroup
+      parameters:
+      - description: |
+          The group's unique identifier
+        in: path
+        name: guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      responses:
+        "204":
+          content: {}
+          description: |
+            This response is returned only when the group was
+            successfully removed.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Delete a group
+      tags:
+      - Groups
+      x-visibility: public
+    get:
+      description: |
+        Get detailed information on a specific group.
+
+        ::alert info
+        This endpoint is available only when groups are enabled in RStudio Connect.
+        ::
+      operationId: getGroup
+      parameters:
+      - description: |
+          The group's unique identifier
+        in: path
+        name: guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: |
+            The requested group details.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Get group details
+      tags:
+      - Groups
+      x-visibility: public
+  /v1/experimental/tasks/{id}:
+    get:
+      description: |
+        Returns the current state of a task and any output lines past the
+        requested initial position (`first`).
+
+        When `wait` is non-zero, will wait up to that number of seconds for
+        the task to complete before responding. The current state of the task
+        is returned once the task completes or `wait` seconds elapse.
+
+        Incrementally receive task output by using the `last` response field
+        value as the `first` value in a subsequent query.
+
+        Use `wait` and `first` together to incrementally fetch generated
+        output.
+
+        Here is a URL that allows up to 5 seconds before returning all
+        available output:
+
+        ```
+        /experimental/tasks/CmsfmnfDDyRUrsAc?wait=5&first=0
+        ```
+
+        Let's assume that request has a JSON response with the `last` field
+        having a value of `23`. Here is a URL that requests output past that
+        point, again allowing up to 5 seconds:
+
+        ```
+        /experimental/tasks/CmsfmnfDDyRUrsAc?wait=5&first=23
+        ```
+
+        Continue with this pattern until the JSON response indicates that the
+        task has finished.
+      operationId: getTask
+      parameters:
+      - description: |
+          The identifier of the desired task.
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      - description: |
+          The first line of output to include in the response. The value `0`
+          indicates that all lines should be returned.
+
+          Values less than `0` are not permitted. Values greater than the
+          total number of lines produced by the task are not permitted.
+        in: query
+        name: first
+        schema:
+          default: 0
+          format: int32
+          type: integer
+      - description: |
+          The number of seconds to wait for task completion before
+          responding. The current state of the task is returned once the
+          task completes or this time elapses.
+
+          Values less than `0` or greater than `20` are not permitted.
+        in: query
+        name: wait
+        schema:
+          default: 0
+          format: int32
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: |
+            The task details.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Get task details
+      tags:
+      - Tasks
+      x-visibility: experimental
+  /v1/experimental/bundles/{id}:
+    delete:
+      description: |
+        Delete a specific bundle.
+
+        Bundle deletion is permitted by authorized clients with collaborator
+        rights.
+
+        On-disk data and database records are removed as a consequence of this
+        call. Deletion is not allowed while the bundle is still active.
+      operationId: deleteBundle
+      parameters:
+      - description: |
+          The unique identifier of the desired bundle.
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          content: {}
+          description: |
+            Returned when the bundle was successfully removed.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Delete bundle
+      tags:
+      - Bundles
+      x-visibility: experimental
+    get:
+      description: |
+        Get detailed information about a specific bundle.
+
+        Bundle reads are permitted by all users with viewership rights to the
+        content item. R and Python versions are populated for users with
+        "publisher" and "administrator" role.
+      operationId: getBundle
+      parameters:
+      - description: |
+          The unique identifier of the desired bundle.
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+          description: |
+            The bundle details.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Get bundle details
+      tags:
+      - Bundles
+      x-visibility: experimental
+  /v1/experimental/bundles/{id}/download:
+    get:
+      description: |
+        Download a deployment bundle.
+
+        Bundle download is permitted by authorized clients with collaborator
+        rights.
+
+        Download a `gzip` compressed `tar` archive (`.tar.gz`) containing the
+        code/data from one deployment of the associated content.
+
+        See the [`POST
+        /experimental/content/{guid}/upload`](#uploadContentBundle) endpoint
+        for details about the construction of bundle archives.
+      operationId: downloadBundle
+      parameters:
+      - description: |
+          The unique identifier of the desired bundle.
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                format: binary
+                type: string
+          description: |
+            A `gzip` compressed `tar` archive file.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: Download the bundle archive
+      tags:
+      - Bundles
+      x-visibility: experimental
+  /v1/experimental/content/{guid}/bundles:
+    get:
+      description: |
+        List bundles associated with a specific content item.
+
+        Bundle enumeration is permitted by all users with viewership rights to
+        the content item. R and Python versions are populated for users with
+        "publisher" and "administrator" role.
+
+        Results are sorted by ID.
+
+        #### Pagination
+
+        This endpoint uses offset pagination (using page numbers). The [Offset
+        Pagination](../cookbook/pagination/#offset-pagination) recipe in the
+        RStudio Connect API Cookbook has sample code for fetching multiple
+        pages from a list endpoint.
+      operationId: getBundles
+      parameters:
+      - description: |
+          The unique identifier of the desired content item.
+        in: path
+        name: guid
+        required: true
+        schema:
+          format: uuid
+          type: string
+      - description: |
+          The page to return relative to the given `page_size`. If
+          `page_number` is 0 or negative, an error will be returned.
+        in: query
+        name: page_number
+        schema:
+          default: 1
+          format: int32
+          minimum: 1
+          type: integer
+      - description: |
+          The number of items to include in each page. This parameter is
+          "best effort" since there may not be enough bundles to honor the
+          request. If `page_size` is less than 1 or greater than 500, an
+          error will be returned.
+        in: query
+        name: page_size
+        schema:
+          default: 20
+          format: int32
+          maximum: 500
+          minimum: 1
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bundles'
+          description: |
+            The list of bundles.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation is invalid.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested operation requires authentication.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            You do not have permission to perform this operation.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            The requested object does not exist.
+        "500":
+          content: {}
+          description: |
+            A server error occurred.
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIError'
+          description: |
+            An error occurred invoking the API.
+      summary: List bundles
+      tags:
+      - Bundles
+      x-visibility: experimental
+components:
+  requestBodies:
+    inline_object_1:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_1'
+      required: true
+    inline_object:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object'
+      required: true
+    inline_object_6:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_6'
+      required: true
+    inline_object_5:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_5'
+      required: true
+    inline_object_4:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_4'
+      required: true
+    inline_object_3:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_3'
+      required: true
+    inline_object_2:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_object_2'
+      required: true
+  responses:
+    APIError:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+      description: |
+        An error occurred invoking the API.
+    BadRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+      description: |
+        The requested operation is invalid.
+    Conflict:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+      description: |
+        The request could not be completed due to a conflict.
+    Forbidden:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+      description: |
+        You do not have permission to perform this operation.
+    InternalServerError:
+      content: {}
+      description: |
+        A server error occurred.
+    NotFound:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+      description: |
+        The requested object does not exist.
+    Unauthorized:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+      description: |
+        The requested operation requires authentication.
+  schemas:
+    APIError:
+      description: |
+        This object defines data returned in the case of an error. The [API
+        error codes](#API-Error-Codes) reference enumerates all values for
+        `code`. The response `error` message can vary from the default message
+        to provide additional details about the error.
+      example:
+        code: 24
+        payload: {}
+        error: The requested operation requires authentication.
+      properties:
+        code:
+          description: |
+            The specific code for the type of error returned.
+          example: 24
+          type: integer
+        payload:
+          nullable: true
+          properties: {}
+          type: object
+        error:
+          description: |
+            Some text which describes the problem that was encountered.
+          example: The requested operation requires authentication.
+          type: string
+      required:
+      - code
+      - error
+      type: object
+    AuditEntry:
+      example:
+        event_description: Added user Full Name (username)
+        user_id: string
+        user_description: Full name (username)
+        time: 2006-01-02T15:04:05Z07:00
+        action: add_user
+        id: string
+      properties:
+        event_description:
+          description: |
+            Description of action
+          example: Added user Full Name (username)
+          type: string
+        user_id:
+          description: |
+            User ID of the actor who made the audit action
+          type: string
+        user_description:
+          description: |
+            Description of the actor
+          example: Full name (username)
+          type: string
+        time:
+          description: |
+            Timestamp in [RFC3339](https://tools.ietf.org/html/rfc3339) format when action was taken
+          format: date-time
+          type: string
+        action:
+          description: |
+            Audit action taken
+          example: add_user
+          type: string
+        id:
+          description: |
+            ID of the audit action
+          type: string
+      required:
+      - action
+      - event_description
+      - id
+      - time
+      - user_description
+      - user_id
+      type: object
+    AuditLogs:
+      example:
+        paging:
+          first: http://localhost:3443/__api__/audit_logs
+          previous: http://localhost:3443/__api__/audit_logs?previous=23948901087
+          last: http://localhost:3443/__api__/audit_logs?last=true
+          cursors:
+            previous: "23948901087"
+            next: "23948901087"
+          next: http://localhost:3443/__api__/audit_logs?next=23948901087
+        results:
+        - event_description: Added user Full Name (username)
+          user_id: string
+          user_description: Full name (username)
+          time: 2006-01-02T15:04:05Z07:00
+          action: add_user
+          id: string
+      properties:
+        paging:
+          $ref: '#/components/schemas/AuditPager'
+        results:
+          description: |
+            The audit logs
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+          type: array
+      type: object
+    AuditPager:
+      description: |
+        Paging object that can be used for navigation
+      example:
+        first: http://localhost:3443/__api__/audit_logs
+        previous: http://localhost:3443/__api__/audit_logs?previous=23948901087
+        last: http://localhost:3443/__api__/audit_logs?last=true
+        cursors:
+          previous: "23948901087"
+          next: "23948901087"
+        next: http://localhost:3443/__api__/audit_logs?next=23948901087
+      properties:
+        next:
+          description: |
+            A full URL of the next page of results when the current request was
+            made.
+
+            It will be `null` if the current response represents the last page of results.
+          example: http://localhost:3443/__api__/audit_logs?next=23948901087
+          nullable: true
+          type: string
+        previous:
+          description: |
+            A full URL of the previous page of results when the curent request
+            was made.
+
+            It will be `null` if the current response represents the first page of results.
+          example: http://localhost:3443/__api__/audit_logs?previous=23948901087
+          nullable: true
+          type: string
+        last:
+          description: |
+            A full URL of the last page of results.
+
+            It will be `null` if the current response represents the last page of results.
+          example: http://localhost:3443/__api__/audit_logs?last=true
+          nullable: true
+          type: string
+        cursors:
+          $ref: '#/components/schemas/AuditPager_cursors'
+        first:
+          description: |
+            A full URL of the first page of results.
+
+            It will be `null` if the current response represents the first page of results.
+          example: http://localhost:3443/__api__/audit_logs
+          nullable: true
+          type: string
+      required:
+      - cursors
+      - first
+      - last
+      - next
+      - previous
+      type: object
+    Bundle:
+      description: |
+        Content published to RStudio Connect is encapsulated in a "bundle" that
+        contains the source code and data necessary to execute the content. An
+        application or report is updated by uploading a new bundle.
+      example:
+        content_guid: 25438b83-ea6d-4839-ae8e-53c52ac5f9ce
+        r_version: 3.5.1
+        created_time: 2006-01-02T15:04:05Z07:00
+        active: false
+        py_version: 2.7.10
+        id: "101"
+        size: 1000000
+      properties:
+        content_guid:
+          description: |
+            The identifier of the owning content.
+          example: 25438b83-ea6d-4839-ae8e-53c52ac5f9ce
+          format: uuid
+          readOnly: true
+          type: string
+        r_version:
+          description: |
+            The version of the R interpreter used when last restoring this
+            bundle. The value `null` represents that an R interpreter is not used
+            by this bundle or that the R package environment has not been
+            successfully restored.
+
+            R version is not disclosed to users with a "viewer" role and
+            returned with the value `null`.
+          example: 3.5.1
+          nullable: true
+          readOnly: true
+          type: string
+        active:
+          description: |
+            Indicates if this bundle is active for the owning content.
+          example: false
+          readOnly: true
+          type: boolean
+        created_time:
+          description: |
+            The timestamp (RFC3339) of when this bundle was created.
+          format: date-time
+          readOnly: true
+          type: string
+        py_version:
+          description: |
+            The version of the Python interpreter used when last restoring this
+            bundle.  The value `null` represents that a Python interpreter is not
+            used by this bundle or that the Python package environment has not
+            been successfully restored.
+
+            Python version is not disclosed to users with a "viewer" role and
+            returned with the value `null`.
+          example: 2.7.10
+          nullable: true
+          readOnly: true
+          type: string
+        id:
+          description: |
+            The identifier for this bundle.
+          example: "101"
+          readOnly: true
+          type: string
+        size:
+          description: |
+            On-disk size in bytes of the tar.gz file associated with this bundle.
+            Zero when there is no on-disk file.
+          example: 1000000.0
+          format: float
+          readOnly: true
+          type: number
+      type: object
+      x-visibility: experimental
+    Bundles:
+      example:
+        total: 1
+        results:
+        - content_guid: 25438b83-ea6d-4839-ae8e-53c52ac5f9ce
+          r_version: 3.5.1
+          created_time: 2006-01-02T15:04:05Z07:00
+          active: false
+          py_version: 2.7.10
+          id: "101"
+          size: 1000000
+        current_page: 1
+      properties:
+        total:
+          description: |
+            The total number of bundles that belong to the given content.
+          example: 1
+          type: integer
+        results:
+          description: |
+            The bundles list
+          items:
+            $ref: '#/components/schemas/Bundle'
+          type: array
+        current_page:
+          description: |
+            The current page of results.
+          example: 1
+          format: int32
+          type: integer
+      type: object
+      x-visibility: experimental
+    Content:
+      description: |
+        The content object models all the "things" you may deploy to RStudio
+        Connect. This includes Shiny applications, R Markdown documents, Plumber
+        APIs, TensorFlow Model APIs, and plots.
+
+        Content has an `app_mode` field that represents the type of content
+        represented by this item and its runtime model. This field initially has
+        a value of `unknown` and receives its final value upon its first
+        successful bundle deploy.
+
+        * `rmd-static` - An [R Markdown](https://rmarkdown.rstudio.com) document or site.
+        * `shiny` - R code defining a [Shiny application](https://shiny.rstudio.com).
+        * `rmd-shiny` - An [R Markdown](https://rmarkdown.rstudio.com) document with a Shiny runtime.
+        * `static` - Content deployed without source; often HTML and plots.
+        * `api` - R code defining a [Plumber API](https://www.rplumber.io).
+        * `jupyter-static` - A Jupyter Notebook.
+        * `tensorflow-saved-model` - A TensorFlow Model API.
+        * `unknown` - No known runtime model.
+
+        Content marked as `shiny`, `rmd-shiny`, `api`, or
+        `tensorflow-saved-model` is executed on demand as requests arrive.
+
+        Content marked as `rmd-static` or `jupyter-static` renders from source
+        to output HTML. This rendering can occur based on some schedule or when
+        explicitly triggered. It is *not* on each visit. Viewers of this type of
+        content see a previously rendered result.
+
+        Content marked `static` is presented to viewers in its deployed form.
+
+        The `content_category` field refines the type of content specified by
+        `app_mode`. It is empty by default. The `rsconnect` R package may assign
+        a value when analyzing your content and building its manifest and
+        bundle. Plots (images created in the RStudio IDE and presented in the
+        "Plots" pane) have an `app_mode` of `static` and receive a
+        `content_category` of `plot` to distinguish them from other HTML
+        documents. Pinned static data sets have an `app_mode` of `static` and a
+        `content_category` of `pin`. Multi-document R Markdown sites have an
+        `app_mode` of `rmd-static` and a `content_category` of `site`.
+
+        Fields marked "read-only" cannot be written by
+        [`POST /experimental/content`](#createContent) or
+        [`POST /experimental/content/{guid}`](#updateContent).
+
+        The fields `bundle_id`, `app_mode`, `content_category`,
+        `has_parameters`, `r_version`, and `py_version` are computed as a
+        consequence of a [`POST
+        /experimental/content/{guid}/deploy`](#deployContentBundle) deployment
+        operation.
+
+        The `run_as` and `run_as_current_user` fields are read-only as fields of
+        Content objects. A future API will allow adjustment of these properties.
+        Use the RStudio Connect dashboard to adjust what Unix user executes your
+        content.
+      example:
+        max_conns_per_process: 20
+        run_as: rstudio-connect
+        max_processes: 3
+        access_type: acl
+        app_mode: shiny
+        created_time: 2006-01-02T15:04:05Z07:00
+        init_timeout: 60
+        min_processes: 0
+        read_timeout: 3600
+        py_version: 2.7.10
+        guid: 25438b83-ea6d-4839-ae8e-53c52ac5f9ce
+        title: Quarterly Analysis of Team Velocity
+        run_as_current_user: false
+        role: owner
+        description: |
+          This report calculates per-team statistics ...
+        load_factor: 0.5
+        r_version: 3.5.1
+        has_parameters: false
+        idle_timeout: 5
+        bundle_id: "101"
+        connection_timeout: 3600
+        name: quarterly-analysis
+        url: http://rstudio-connect.company.com/content/42
+        content_category: site
+        last_deployed_time: 2006-01-02T15:04:05Z07:00
+        owner_guid: 25438b83-ea6d-4839-ae8e-53c52ac5f9ce
+      properties:
+        max_conns_per_process:
+          description: |
+            Specifies the maximum number of client connections allowed to an
+            individual process. Incoming connections which will exceed this
+            limit are routed to a new process or rejected. When `null`, the
+            default `Scheduler.MaxConnsPerProcess` is used. Applies only to
+            content types that are executed on demand.
+          example: 20
+          format: int32
+          nullable: true
+          type: integer
+        run_as:
+          description: |
+            The UNIX user that executes this content. When `null`, the default
+            `Applications.RunAs` is used. Applies only to executable content
+            types - not `static`.
+          example: rstudio-connect
+          nullable: true
+          readOnly: true
+          type: string
+        max_processes:
+          description: |
+            Specifies the total number of concurrent processes allowed for a
+            single interactive application. When `null`, the default
+            `Scheduler.MaxProcesses` is used. Applies only to content types that
+            are executed on demand.
+          example: 3
+          format: int32
+          nullable: true
+          type: integer
+        access_type:
+          default: acl
+          description: |
+            Access type describes how this content manages its viewers. The
+            value `all` is the most permissive; any visitor to RStudio Connect
+            will be able to view this content. The value `logged_in` indicates
+            that all RStudio Connect accounts may view the content. The `acl`
+            value lets specifically enumerated users and groups view the
+            content. Users configured as collaborators may always view content.
+          enum:
+          - all
+          - logged_in
+          - acl
+          example: acl
+          type: string
+        run_as_current_user:
+          default: false
+          description: |
+            Indicates if this content is allowed to execute as the logged-in
+            user when using PAM authentication. Applies only to executable
+            content types - not `static`.
+          example: false
+          readOnly: true
+          type: boolean
+        created_time:
+          description: |
+            The timestamp (RFC3339) indicating when this content was created.
+          format: date-time
+          readOnly: true
+          type: string
+        init_timeout:
+          description: |
+            The maximum number of seconds allowed for an interactive application
+            to start. RStudio Connect must be able to connect to a newly
+            launched Shiny application, for example, before this threshold has
+            elapsed. When `null`, the default `Scheduler.InitTimeout` is used.
+            Applies only to content types that are executed on demand.
+          example: 60
+          format: int32
+          nullable: true
+          type: integer
+        min_processes:
+          description: |
+            Specifies the minimum number of concurrent processes allowed for a
+            single interactive application. When `null`, the default
+            `Scheduler.MinProcesses` is used. Applies only to content types that
+            are executed on demand.
+          example: 0
+          format: int32
+          nullable: true
+          type: integer
+        read_timeout:
+          description: |
+            Maximum number of seconds allowed without data received from a
+            client connection. A value of `0` means a lack of client (browser)
+            interaction never causes the connection to close. When `null`, the
+            default `Scheduler.ReadTimeout` is used. Applies only to content
+            types that are executed on demand.
+          example: 3600
+          format: int32
+          nullable: true
+          type: integer
+        py_version:
+          description: |
+            The version of the Python interpreter associated with this content.
+            The value `null` represents that a Python interpreter is not used by
+            this content or that the Python package environment has not been
+            successfully restored. Automatically assigned upon the successful
+            deployment of a bundle.
+          example: 2.7.10
+          nullable: true
+          readOnly: true
+          type: string
+        guid:
+          description: |
+            The unique identifier of this content item.
+          example: 25438b83-ea6d-4839-ae8e-53c52ac5f9ce
+          format: uuid
+          readOnly: true
+          type: string
+        title:
+          description: |
+            The title of this content.
+          example: Quarterly Analysis of Team Velocity
+          nullable: true
+          type: string
+        app_mode:
+          description: |
+            The runtime model for this content. Has a value of `unknown` before
+            data is deployed to this item. Automatically assigned upon the first
+            successful bundle deployment.
+
+            See the Content description for additional details.
+          enum:
+          - rmd-static
+          - shiny
+          - rmd-shiny
+          - static
+          - api
+          - jupyter-static
+          - tensorflow-saved-model
+          - unknown
+          example: shiny
+          readOnly: true
+          type: string
+        role:
+          description: |
+            The relationship of the accessing user to this content. A value of
+            `owner` is returned for the content owner. `editor` indicates a
+            collaborator. The `viewer` value is given to users who are permitted
+            to view the content. A `none` role is returned for administrators
+            who cannot view the content but are permitted to view its
+            configuration. Computed at the time of the request.
+          enum:
+          - owner
+          - editor
+          - viewer
+          - none
+          example: owner
+          readOnly: true
+          type: string
+        description:
+          description: |
+            A rich description of this content.
+          example: This report calculates per-team statistics ...
+          type: string
+        has_parameters:
+          description: |
+            True when R Markdown rendered content allows parameter
+            configuration. Automatically assigned upon the first successful
+            bundle deployment. Applies only to content with an `app_mode` of
+            `rmd-static`.
+          example: false
+          readOnly: true
+          type: boolean
+        r_version:
+          description: |
+            The version of the R interpreter associated with this content. The
+            value `null` represents that an R interpreter is not used by this
+            content or that the R package environment has not been successfully
+            restored. Automatically assigned upon the successful deployment of a
+            bundle.
+          example: 3.5.1
+          nullable: true
+          readOnly: true
+          type: string
+        load_factor:
+          description: |
+            Controls how aggressively new processes are spawned. When `null`,
+            the default `Scheduler.LoadFactor` is used. Applies only to content
+            types that are executed on demand.
+          example: 0.5
+          format: float
+          nullable: true
+          type: number
+        idle_timeout:
+          description: |
+            The maximum number of seconds a worker process for an interactive
+            application to remain alive after it goes idle (no active
+            connections). When `null`, the default `Scheduler.IdleTimeout` is
+            used. Applies only to content types that are executed on demand.
+          example: 5
+          format: int32
+          nullable: true
+          type: integer
+        bundle_id:
+          description: |
+            The identifier for the active deployment bundle. Automatically
+            assigned upon the successful deployment of that bundle.
+          example: "101"
+          nullable: true
+          readOnly: true
+          type: string
+        connection_timeout:
+          description: |
+            Maximum number of seconds allowed without data sent or received
+            across a client connection. A value of `0` means connections will
+            never time-out (not recommended). When `null`, the default
+            `Scheduler.ConnectionTimeout` is used. Applies only to content types
+            that are executed on demand.
+          example: 3600
+          format: int32
+          nullable: true
+          type: integer
+        name:
+          description: |
+            A simple, URL-friendly identifier. Allows alpha-numeric
+            characters, hyphens (`"-"`), and underscores (`"_"`).
+          example: quarterly-analysis
+          type: string
+        url:
+          description: |
+            The URL associated with this content. Computed from the associated
+            vanity URL or the identifiers for this content.
+          example: http://rstudio-connect.company.com/content/42
+          readOnly: true
+          type: string
+        content_category:
+          description: |
+            Describes the specialization of the content runtime model.
+            Automatically assigned upon the first successful bundle deployment.
+          example: site
+          readOnly: true
+          type: string
+        last_deployed_time:
+          description: |
+            The timestamp (RFC3339) indicating when this content last had a
+            successful bundle deployment performed.
+          format: date-time
+          readOnly: true
+          type: string
+        owner_guid:
+          description: |
+            The unique identifier of the user who created this content item.
+            Automatically assigned when the content is created.
+          example: 25438b83-ea6d-4839-ae8e-53c52ac5f9ce
+          format: uuid
+          readOnly: true
+          type: string
+      required:
+      - name
+      type: object
+      x-visibility: experimental
+    ContentDeploymentInstructions:
+      description: |
+        Optionally identifies the target deployment bundle.
+      example:
+        bundle_id: "101"
+      properties:
+        bundle_id:
+          example: "101"
+          nullable: true
+          type: string
+      type: object
+      x-visibility: experimental
+    ContentDeploymentTask:
+      description: |
+        Identifies the task that can be used to track the progress of a
+        deployment operation.
+      example:
+        task_id: M49MsuXt6XVzlRdL
+      properties:
+        task_id:
+          description: |
+            Identifier for the created deployment task.
+          example: M49MsuXt6XVzlRdL
+          readOnly: true
+          type: string
+      type: object
+      x-visibility: experimental
+    ContentUploadBundle:
+      description: |
+        Describes the bundle created by a just-completed upload.
+      example:
+        bundle_id: "449"
+        size: 1000000
+      properties:
+        bundle_id:
+          description: |
+            Identifier for the newly created bundle.
+          example: "449"
+          readOnly: true
+          type: string
+        size:
+          description: |
+            The number of bytes received.
+          example: 1000000.0
+          format: float
+          readOnly: true
+          type: number
+      type: object
+      x-visibility: experimental
+    ContentVisit:
+      example:
+        content_guid: bd1d2285-6c80-49af-8a83-a200effe3cb3
+        rendering_id: 7
+        variant_key: HidI2Kwq
+        data_version: 1
+        time: 2018-09-15T18:00:00-05:00
+        bundle_id: 33
+        user_guid: 08e3a41d-1f8e-47f2-8855-f05ea3b0d4b2
+      properties:
+        content_guid:
+          description: |
+            The GUID, in [RFC4122](https://tools.ietf.org/html/rfc4122) format, of the content
+            this information pertains to.
+          example: bd1d2285-6c80-49af-8a83-a200effe3cb3
+          format: uuid
+          type: string
+        rendering_id:
+          description: |
+            The ID of the rendering the user visited.  This will be `null` for static
+            content.
+          example: 7
+          type: integer
+        variant_key:
+          description: |
+            The key of the variant the user visited.  This will be `null` for static
+            content.
+          example: HidI2Kwq
+          type: string
+        data_version:
+          description: |
+            The data version the record was recorded with.
+
+            The [Rendered and Static Content Visit
+            Events](../admin/historical-information/#rendered-and-static-content-visit-events)
+            section of the RStudio Connect Admin Guide explains how to interpret
+            `data_version` values.
+          example: 1
+          format: int32
+          type: integer
+        time:
+          description: |
+            The timestamp, in [RFC3339](https://tools.ietf.org/html/rfc3339) format, when the
+            user visited the content.
+          example: 2018-09-15T18:00:00-05:00
+          format: date-time
+          type: string
+        bundle_id:
+          description: |
+            The ID of the particular bundle used.
+          example: 33
+          type: integer
+        user_guid:
+          description: |
+            The GUID, in [RFC4122](https://tools.ietf.org/html/rfc4122) format, of the user
+            that visited the content.
+          example: 08e3a41d-1f8e-47f2-8855-f05ea3b0d4b2
+          format: uuid
+          type: string
+      required:
+      - bundle_id
+      - content_guid
+      - data_version
+      - time
+      - user_guid
+      type: object
+    ContentVisitLogs:
+      example:
+        paging:
+          first: http://localhost:3443/__api__/v1/instrumentation/content/visits
+          previous: http://localhost:3443/__api__/v1/instrumentation/content/visits?previous=23948901087
+          last: http://localhost:3443/__api__/v1/instrumentation/content/visits?last=true
+          cursors:
+            previous: "23948901087"
+            next: "23948901087"
+          next: http://localhost:3443/__api__/v1/instrumentation/content/visits?next=23948901087
+        results:
+        - content_guid: bd1d2285-6c80-49af-8a83-a200effe3cb3
+          rendering_id: 7
+          variant_key: HidI2Kwq
+          data_version: 1
+          time: 2018-09-15T18:00:00-05:00
+          bundle_id: 33
+          user_guid: 08e3a41d-1f8e-47f2-8855-f05ea3b0d4b2
+      properties:
+        paging:
+          $ref: '#/components/schemas/ContentVisitPager'
+        results:
+          description: |
+            The content visit logs
+          items:
+            $ref: '#/components/schemas/ContentVisit'
+          type: array
+      type: object
+    ContentVisitPager:
+      description: |
+        Paging object that can be used for navigation
+      example:
+        first: http://localhost:3443/__api__/v1/instrumentation/content/visits
+        previous: http://localhost:3443/__api__/v1/instrumentation/content/visits?previous=23948901087
+        last: http://localhost:3443/__api__/v1/instrumentation/content/visits?last=true
+        cursors:
+          previous: "23948901087"
+          next: "23948901087"
+        next: http://localhost:3443/__api__/v1/instrumentation/content/visits?next=23948901087
+      properties:
+        next:
+          description: |
+            A full URL of the next page of results when the original request was made.
+
+            It will be `null` if the current response represents the last page of results.
+          example: http://localhost:3443/__api__/v1/instrumentation/content/visits?next=23948901087
+          nullable: true
+          type: string
+        previous:
+          description: |
+            A full URL of the previous page of results when the original request was made.
+
+            It will be `null` if the current response represents the first page of results.
+          example: http://localhost:3443/__api__/v1/instrumentation/content/visits?previous=23948901087
+          nullable: true
+          type: string
+        last:
+          description: |
+            A full URL of the last page of results.
+
+            It will be `null` if the current response represents the last page of results.
+          example: http://localhost:3443/__api__/v1/instrumentation/content/visits?last=true
+          nullable: true
+          type: string
+        cursors:
+          $ref: '#/components/schemas/AuditPager_cursors'
+        first:
+          description: |
+            A full URL of the first page of results.
+
+            It will be `null` if the current response represents the first page of results.
+          example: http://localhost:3443/__api__/v1/instrumentation/content/visits
+          nullable: true
+          type: string
+      required:
+      - cursors
+      - first
+      - last
+      - next
+      - previous
+      type: object
+    EditableUser:
+      example:
+        username: jondoe
+        first_name: Jon
+        last_name: Doe
+        user_role: administrator
+        updated_time: 2006-01-02T15:04:05Z07:00
+        email: jon.doe@example.com
+      properties:
+        username:
+          description: |
+            The user's username
+          example: jondoe
+          type: string
+        first_name:
+          description: |
+            The user's first name
+          example: Jon
+          type: string
+        last_name:
+          description: |
+            The user's last name
+          example: Doe
+          type: string
+        user_role:
+          description: |
+            The user's role
+          enum:
+          - administrator
+          - publisher
+          - viewer
+          example: administrator
+          type: string
+        updated_time:
+          description: |
+            The timestamp (in [RFC3339](https://tools.ietf.org/html/rfc3339) format) when the
+            user was last updated in the RStudio Connect server
+          format: date-time
+          type: string
+        email:
+          description: |
+            The user's email
+          example: jon.doe@example.com
+          format: email
+          type: string
+      required:
+      - email
+      - first_name
+      - last_name
+      - updated_time
+      - user_role
+      - username
+      type: object
+    Group:
+      example:
+        guid: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+        name: accounting
+        owner_guid: string
+      properties:
+        guid:
+          description: |
+            The unique identifier
+          example: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+          format: uuid
+          type: string
+        name:
+          description: |
+            The group name
+          example: accounting
+          type: string
+        owner_guid:
+          description: |
+            The group owner's unique identifier. When using LDAP, or
+            Proxied authentication with group provisioning enabled
+            this property will always be `null`.
+          format: uuid
+          nullable: true
+          type: string
+      required:
+      - guid
+      - name
+      - owner_guid
+      type: object
+    GroupMembers:
+      example:
+        total: 1
+        results:
+        - username: jondoe
+          active_time: 2006-01-02T15:04:05Z07:00
+          first_name: Jon
+          last_name: Doe
+          locked: false
+          user_role: administrator
+          updated_time: 2006-01-02T15:04:05Z07:00
+          confirmed: true
+          created_time: 2006-01-02T15:04:05Z07:00
+          guid: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+          email: jon.doe@example.com
+        current_page: 1
+      properties:
+        total:
+          description: |
+            The number of group members
+          example: 1
+          type: integer
+        results:
+          description: |
+            The group members list
+          items:
+            $ref: '#/components/schemas/User'
+          type: array
+        current_page:
+          description: |
+            The current page of results
+          example: 1
+          format: int32
+          minimum: 0
+          type: integer
+      type: object
+    GroupRemoteSearch:
+      example:
+        total: 1
+        results:
+        - temp_ticket: string
+          guid: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+          name: accounting
+        current_page: 1
+      properties:
+        total:
+          description: |
+            The number of groups in the search results
+          example: 1
+          type: integer
+        results:
+          description: |
+            The groups list
+          items:
+            $ref: '#/components/schemas/GroupWithTicket'
+          type: array
+        current_page:
+          description: |
+            The current page of results
+          example: 1
+          format: int32
+          minimum: 0
+          type: integer
+      type: object
+    GroupWithTicket:
+      example:
+        temp_ticket: string
+        guid: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+        name: accounting
+      properties:
+        temp_ticket:
+          description: |
+            This value is for actions that require a `temp_ticket`, such
+            as adding an LDAP group to the Connect server.
+          type: string
+        guid:
+          description: |
+            The group's unique identifier in
+            [RFC4122](https://tools.ietf.org/html/rfc4122) format. When
+            a group does not exist in the RStudio Connect server, this
+            property will be `null`.
+          example: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+          format: uuid
+          nullable: true
+          type: string
+        name:
+          description: |
+            The group name
+          example: accounting
+          type: string
+      required:
+      - guid
+      - name
+      - temp_ticket
+      type: object
+    Groups:
+      example:
+        total: 1
+        results:
+        - guid: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+          name: accounting
+          owner_guid: string
+        current_page: 1
+      properties:
+        total:
+          description: |
+            The number of users that match the given filters
+          example: 1
+          type: integer
+        results:
+          description: |
+            The groups list
+          items:
+            $ref: '#/components/schemas/Group'
+          type: array
+        current_page:
+          description: |
+            The current page of results
+          example: 1
+          format: int32
+          minimum: 0
+          type: integer
+      type: object
+    RInstallation:
+      description: |
+        This defines the information provided by the server about a single installation
+        of R.
+      example:
+        version: 3.4.4
+      properties:
+        version:
+          description: |
+            The version number of this R installation.
+          example: 3.4.4
+          type: string
+      type: object
+    RInstallations:
+      description: |
+        This defines the top-level object that describes the data returned by the server.
+        It contains information about each installation of R that is known.
+      example:
+        installations:
+        - version: 3.4.4
+      properties:
+        installations:
+          description: |
+            The array of information about RStudio Connect's R
+            installations.
+          items:
+            $ref: '#/components/schemas/RInstallation'
+          type: array
+      type: object
+    RemoteSearchResults:
+      example:
+        total: 1
+        results:
+        - username: jondoe
+          active_time: 2006-01-02T15:04:05Z07:00
+          first_name: Jon
+          last_name: Doe
+          locked: false
+          temp_ticket: string
+          user_role: administrator
+          updated_time: 2006-01-02T15:04:05Z07:00
+          confirmed: true
+          created_time: 2006-01-02T15:04:05Z07:00
+          guid: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+          email: jon.doe@example.com
+        current_page: 1
+      properties:
+        total:
+          description: |
+            The number of users in the search results
+          example: 1
+          type: integer
+        results:
+          description: |
+            The users list
+          items:
+            $ref: '#/components/schemas/UserWithTicket'
+          type: array
+        current_page:
+          description: |
+            The current page of results
+          example: 1
+          format: int32
+          minimum: 0
+          type: integer
+      type: object
+    ShinyAppUsage:
+      example:
+        started: 2018-09-15T18:00:00-05:00
+        content_guid: bd1d2285-6c80-49af-8a83-a200effe3cb3
+        user_guid: 08e3a41d-1f8e-47f2-8855-f05ea3b0d4b2
+        ended: 2018-09-15T18:01:00-05:00
+        data_version: 1
+      properties:
+        started:
+          description: |
+            The timestamp, in [RFC3339](https://tools.ietf.org/html/rfc3339) format, when the
+            user opened the application.
+          example: 2018-09-15T18:00:00-05:00
+          format: date-time
+          type: string
+        content_guid:
+          description: |
+            The GUID, in [RFC4122](https://tools.ietf.org/html/rfc4122) format, of the Shiny
+            application this information pertains to.
+          example: bd1d2285-6c80-49af-8a83-a200effe3cb3
+          format: uuid
+          type: string
+        user_guid:
+          description: |
+            The GUID, in [RFC4122](https://tools.ietf.org/html/rfc4122) format, of the user
+            that visited the application.
+          example: 08e3a41d-1f8e-47f2-8855-f05ea3b0d4b2
+          format: uuid
+          type: string
+        data_version:
+          description: |
+            The data version the record was recorded with.
+
+            The [Shiny Application
+            Events](../admin/historical-information/#shiny-application-events)
+            section of the RStudio Connect Admin Guide explains how to interpret
+            `data_version` values.
+          example: 1
+          format: int32
+          type: integer
+        ended:
+          description: |
+            The timestamp, in [RFC3339](https://tools.ietf.org/html/rfc3339) format, when the
+            user left the application.
+          example: 2018-09-15T18:01:00-05:00
+          format: date-time
+          type: string
+      required:
+      - content_guid
+      - data_version
+      - ended
+      - started
+      - user_guid
+      type: object
+    ShinyAppUsageLogs:
+      example:
+        paging:
+          first: http://localhost:3443/__api__/v1/instrumentation/shiny/usage
+          previous: http://localhost:3443/__api__/v1/instrumentation/shiny/usage?previous=23948901087
+          last: http://localhost:3443/__api__/v1/instrumentation/shiny/usage?last=true
+          cursors:
+            previous: "23948901087"
+            next: "23948901087"
+          next: http://localhost:3443/__api__/v1/instrumentation/shiny/usage?next=23948901087
+        results:
+        - started: 2018-09-15T18:00:00-05:00
+          content_guid: bd1d2285-6c80-49af-8a83-a200effe3cb3
+          user_guid: 08e3a41d-1f8e-47f2-8855-f05ea3b0d4b2
+          ended: 2018-09-15T18:01:00-05:00
+          data_version: 1
+      properties:
+        paging:
+          $ref: '#/components/schemas/ShinyAppUsagePager'
+        results:
+          description: |
+            The Shiny application usage logs
+          items:
+            $ref: '#/components/schemas/ShinyAppUsage'
+          type: array
+      type: object
+    ShinyAppUsagePager:
+      description: |
+        Paging object that can be used for navigation
+      example:
+        first: http://localhost:3443/__api__/v1/instrumentation/shiny/usage
+        previous: http://localhost:3443/__api__/v1/instrumentation/shiny/usage?previous=23948901087
+        last: http://localhost:3443/__api__/v1/instrumentation/shiny/usage?last=true
+        cursors:
+          previous: "23948901087"
+          next: "23948901087"
+        next: http://localhost:3443/__api__/v1/instrumentation/shiny/usage?next=23948901087
+      properties:
+        next:
+          description: |
+            A full URL of the next page of results when the original request was made.
+
+            It will be `null` if the current response represents the last page of results.
+          example: http://localhost:3443/__api__/v1/instrumentation/shiny/usage?next=23948901087
+          nullable: true
+          type: string
+        previous:
+          description: |
+            A full URL of the previous page of results when the original request was made.
+
+            It will be `null` if the current response represents the first page of results.
+          example: http://localhost:3443/__api__/v1/instrumentation/shiny/usage?previous=23948901087
+          nullable: true
+          type: string
+        last:
+          description: |
+            A full URL of the last page of results.
+
+            It will be `null` if the current response represents the last page of results.
+          example: http://localhost:3443/__api__/v1/instrumentation/shiny/usage?last=true
+          nullable: true
+          type: string
+        cursors:
+          $ref: '#/components/schemas/AuditPager_cursors'
+        first:
+          description: |
+            A full URL of the first page of results.
+
+            It will be `null` if the current response represents the first page of results.
+          example: http://localhost:3443/__api__/v1/instrumentation/shiny/usage
+          nullable: true
+          type: string
+      required:
+      - cursors
+      - first
+      - last
+      - next
+      - previous
+      type: object
+    Task:
+      description: |
+        The task tracks the output and status of some operation being performed
+        by RStudio Connect. It is most commonly used to contain details about
+        the progress of a deployment operation.
+      example:
+        code: 1
+        last: 2
+        finished: true
+        error: 'Unable to render: Rendering exited abnormally: exit status 1'
+        output:
+        - Building static content...
+        - Launching static content...
+        id: jXhOhdm5OOSkGhJw
+      properties:
+        code:
+          description: |
+            Numeric indication as to the cause of an error. Non-zero when an
+            error has occured.
+          example: 1
+          format: int32
+          readOnly: true
+          type: integer
+        last:
+          description: |
+            The total number of output lines produced so far. Use as the value
+            to `first` in the next request to only fetch output lines beyond
+            what you have already received.
+          example: 2
+          format: int32
+          readOnly: true
+          type: integer
+        finished:
+          description: |
+            Indicates that a task has completed.
+          example: true
+          readOnly: true
+          type: boolean
+        error:
+          description: |
+            Description of the error. An empty string when no error has
+            occurred.
+          example: 'Unable to render: Rendering exited abnormally: exit status 1'
+          readOnly: true
+          type: string
+        output:
+          description: |
+            An array containing lines of output produced by the task. The
+            initial line of output is dictated by the `first` input parameter.
+            The offset of the last output line is indicated by the `last`
+            response field.
+          example:
+          - Building static content...
+          - Launching static content...
+          items:
+            type: string
+          readOnly: true
+          type: array
+        id:
+          description: |
+            The identifier for this task.
+          example: jXhOhdm5OOSkGhJw
+          readOnly: true
+          type: string
+      type: object
+      x-visibility: experimental
+    User:
+      example:
+        username: jondoe
+        active_time: 2006-01-02T15:04:05Z07:00
+        first_name: Jon
+        last_name: Doe
+        locked: false
+        user_role: administrator
+        updated_time: 2006-01-02T15:04:05Z07:00
+        confirmed: true
+        created_time: 2006-01-02T15:04:05Z07:00
+        guid: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+        email: jon.doe@example.com
+      properties:
+        username:
+          description: |
+            The user's username
+          example: jondoe
+          type: string
+        active_time:
+          description: |
+            The timestamp (in [RFC3339](https://tools.ietf.org/html/rfc3339) format) when the
+            user was last active on the RStudio Connect server
+          format: date-time
+          nullable: true
+          type: string
+        first_name:
+          description: |
+            The user's first name
+          example: Jon
+          type: string
+        last_name:
+          description: |
+            The user's last name
+          example: Doe
+          type: string
+        locked:
+          description: |
+            Whether or not the user is locked
+          example: false
+          type: boolean
+        user_role:
+          description: |
+            The user's role
+          enum:
+          - administrator
+          - publisher
+          - viewer
+          example: administrator
+          type: string
+        updated_time:
+          description: |
+            The timestamp (in [RFC3339](https://tools.ietf.org/html/rfc3339) format) when the
+            user was last updated in the RStudio Connect server
+          format: date-time
+          type: string
+        confirmed:
+          description: |
+            When `false`, the created user must confirm their account
+            through an email. This feature is unique to password
+            authentication.
+          example: true
+          type: boolean
+        created_time:
+          description: |
+            The timestamp (in [RFC3339](https://tools.ietf.org/html/rfc3339) format) when the
+            user was created in the RStudio Connect server
+          format: date-time
+          type: string
+        guid:
+          description: |
+            The user's GUID, or unique identifier, in UUID [RFC4122](https://tools.ietf.org/html/rfc4122)
+            format
+          example: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+          format: uuid
+          type: string
+        email:
+          description: |
+            The user's email
+          example: jon.doe@example.com
+          format: email
+          type: string
+      required:
+      - active_time
+      - confirmed
+      - created_time
+      - email
+      - first_name
+      - guid
+      - last_name
+      - locked
+      - updated_time
+      - user_role
+      - username
+      type: object
+    UserWithTicket:
+      example:
+        username: jondoe
+        active_time: 2006-01-02T15:04:05Z07:00
+        first_name: Jon
+        last_name: Doe
+        locked: false
+        temp_ticket: string
+        user_role: administrator
+        updated_time: 2006-01-02T15:04:05Z07:00
+        confirmed: true
+        created_time: 2006-01-02T15:04:05Z07:00
+        guid: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+        email: jon.doe@example.com
+      properties:
+        username:
+          description: |
+            The user's username
+          example: jondoe
+          type: string
+        active_time:
+          description: |
+            The timestamp (in [RFC3339](https://tools.ietf.org/html/rfc3339) format) when the
+            user was last active on the RStudio Connect server
+          format: date-time
+          nullable: true
+          type: string
+        first_name:
+          description: |
+            The user's first name
+          example: Jon
+          type: string
+        last_name:
+          description: |
+            The user's last name
+          example: Doe
+          type: string
+        locked:
+          description: |
+            Whether or not the user is locked
+          example: false
+          type: boolean
+        temp_ticket:
+          description: |
+            This value is for actions that require a `temp_ticket`, such
+            as adding an LDAP or OAuth2 user to the Connect server.
+          type: string
+        user_role:
+          description: |
+            The user's role
+          enum:
+          - administrator
+          - publisher
+          - viewer
+          example: administrator
+          type: string
+        updated_time:
+          description: |
+            The timestamp (in [RFC3339](https://tools.ietf.org/html/rfc3339) format) when the
+            user was last updated in the RStudio Connect server
+          format: date-time
+          type: string
+        confirmed:
+          description: |
+            Whether or not the user is confirmed. This property will
+            always be `true` for all authentication providers except
+            password.
+          example: true
+          type: boolean
+        created_time:
+          description: |
+            The timestamp (in [RFC3339](https://tools.ietf.org/html/rfc3339) format) when the
+            user was created in the RStudio Connect server
+          format: date-time
+          type: string
+        guid:
+          description: |
+            The user's GUID, or unique identifier in [RFC4122](https://tools.ietf.org/html/rfc4122)
+            format. When a user does not exist in the RStudio Connect server, this property
+            will be `null`.
+          example: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+          format: uuid
+          nullable: true
+          type: string
+        email:
+          description: |
+            The user's email
+          example: jon.doe@example.com
+          format: email
+          type: string
+      required:
+      - active_time
+      - confirmed
+      - created_time
+      - email
+      - first_name
+      - guid
+      - last_name
+      - locked
+      - temp_ticket
+      - updated_time
+      - user_role
+      - username
+      type: object
+    Users:
+      example:
+        total: 1
+        results:
+        - username: jondoe
+          active_time: 2006-01-02T15:04:05Z07:00
+          first_name: Jon
+          last_name: Doe
+          locked: false
+          user_role: administrator
+          updated_time: 2006-01-02T15:04:05Z07:00
+          confirmed: true
+          created_time: 2006-01-02T15:04:05Z07:00
+          guid: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+          email: jon.doe@example.com
+        current_page: 1
+      properties:
+        total:
+          description: |
+            The number of users that match the given filters
+          example: 1
+          type: integer
+        results:
+          description: |
+            The users list
+          items:
+            $ref: '#/components/schemas/User'
+          type: array
+        current_page:
+          description: |
+            The current page of results
+          example: 1
+          format: int32
+          minimum: 0
+          type: integer
+      type: object
+    inline_object:
+      example: {}
+      properties:
+        temp_ticket:
+          description: |
+            The temporary ticket used for creating a user on the RStudio
+            Connect server. It is obtained from the [`GET
+            /users/remote`](#searchRemoteUsers) endpoint.
+          type: string
+      required:
+      - temp_ticket
+      type: object
+    inline_object_1:
+      example:
+        username: john_doe
+        first_name: John
+        last_name: Doe
+        user_role: viewer
+        user_must_set_password: false
+        email: john_doe@rstudio.com
+        unique_id: string
+      properties:
+        username:
+          description: |
+            The user's desired username
+          example: john_doe
+          type: string
+        first_name:
+          description: |
+            The user's first name
+          example: John
+          type: string
+        last_name:
+          description: |
+            The user's last name
+          example: Doe
+          type: string
+        user_role:
+          description: |
+            The user's role. If `null` it will default to the
+            role specified by the config setting
+            `Authorization.DefaultUserRole`.
+          enum:
+          - administrator
+          - publisher
+          - viewer
+          example: viewer
+          nullable: true
+          type: string
+        user_must_set_password:
+          default: false
+          description: |
+            Applies only to password authentication.
+
+            - When `true`, the created user will be asked to set
+            their password on first login. The `password`
+            request parameter cannot be set when this parameter
+            is `true`.
+            - When `false`, you must specify the
+            `password`.
+          type: boolean
+        password:
+          description: |
+            Applies only to password authentication. Must be at
+            least 6 characters long. Cannot be set when
+            `user_must_set_password` is true.
+          type: string
+        email:
+          description: |
+            The user's email.
+          example: john_doe@rstudio.com
+          format: email
+          type: string
+        unique_id:
+          description: |
+            Applies only to proxied authentication when `ProxyAuth.UniqueIdHeader`
+            is being used.  It is required when SAML authentication is being used.
+          type: string
+      required:
+      - username
+      type: object
+    inline_object_2:
+      example:
+        username: john_doe
+        first_name: John
+        last_name: Doe
+        email: john_doe@rstudio.com
+        user_role: viewer
+      properties:
+        username:
+          description: |
+            The user's new username
+          example: john_doe
+          type: string
+        first_name:
+          description: |
+            The user's new first name
+          example: John
+          type: string
+        last_name:
+          description: |
+            The user's new last name
+          example: Doe
+          type: string
+        email:
+          description: |
+            The user's new email.
+          example: john_doe@rstudio.com
+          format: email
+          type: string
+        user_role:
+          description: |
+            The user's new role. Note that you can only
+            downgrade yourself. Administrators can change other
+            users' roles to any valid role.
+          enum:
+          - administrator
+          - publisher
+          - viewer
+          example: viewer
+          type: string
+      type: object
+    inline_object_3:
+      example:
+        locked: false
+      properties:
+        locked:
+          description: |
+            Whether or not the user should be locked.
+          type: boolean
+      required:
+      - locked
+      type: object
+    inline_object_4:
+      example: {}
+      properties:
+        temp_ticket:
+          description: |
+            The temporary ticket used for creating a group on the
+            RStudio Connect server. It is obtained from the [`GET
+            /groups/remote`](#searchRemoteGroups) endpoint.
+          type: string
+      required:
+      - temp_ticket
+      type: object
+    inline_object_5:
+      example:
+        name: marketing
+      properties:
+        name:
+          description: |
+            The group's desired name
+          example: marketing
+          type: string
+      required:
+      - name
+      type: object
+    inline_object_6:
+      example:
+        user_guid: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+      properties:
+        user_guid:
+          description: |
+            The user's unique identifier
+          example: 6f300623-1e0c-48e6-a473-ddf630c0c0c3
+          format: uuid
+          type: string
+      required:
+      - user_guid
+      type: object
+    AuditPager_cursors:
+      description: |
+        Cursors that can be used for navigation
+      properties:
+        next:
+          description: |
+            A cursor ID that can be used with the `next` query param to get
+            the next page of results.
+          example: "23948901087"
+          nullable: true
+          type: string
+        previous:
+          description: |
+            A cursor ID that can be used with the `previous` query param to
+            get the previous page of results.
+          example: "23948901087"
+          nullable: true
+          type: string
+      required:
+      - next
+      - previous
+      type: object
+  securitySchemes:
+    apiKey:
+      in: header
+      name: Authorization
+      type: apiKey
+x-original-swagger-version: "2.0"
